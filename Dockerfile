@@ -247,6 +247,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Bluetooth tools
     bluez \
     bluetooth \
+    libdbus-1-3 \
+    libglib2.0-0 \
     # GPS support
     gpsd \
     gpsd-clients \
@@ -274,6 +276,12 @@ COPY --from=builder /staging/usr/local/bin/ /usr/local/bin/
 COPY --from=builder /staging/usr/local/lib/ /usr/local/lib/
 COPY --from=builder /staging/usr/local/share/ /usr/local/share/
 COPY --from=builder /staging/opt/ /opt/
+
+# SatDump 1.2.2 looks for its config/resources at /usr/share/satdump and
+# plugins at /usr/lib/satdump, but our build installs to /usr/local/{share,lib}.
+# Symlink so satdump finds them.
+RUN ln -sfn /usr/local/share/satdump /usr/share/satdump \
+    && ln -sfn /usr/local/lib/satdump /usr/lib/satdump
 
 # Copy radiosonde Python dependencies installed during builder stage
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
