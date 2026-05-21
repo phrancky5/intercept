@@ -709,6 +709,14 @@ const Settings = {
         if (uiTierSelect) {
             uiTierSelect.value = localStorage.getItem('intercept-ui-tier') || 'enhanced';
         }
+
+        // Time / timezone dropdowns (persisted via InterceptTime in localStorage)
+        if (typeof InterceptTime !== 'undefined') {
+            const tzSelect = document.getElementById('globalTimezoneSelect');
+            if (tzSelect) tzSelect.value = InterceptTime.getTimezone();
+            const fmtSelect = document.getElementById('globalTimeFormatSelect');
+            if (fmtSelect) fmtSelect.value = InterceptTime.getHour12() ? '12' : '24';
+        }
     },
 
     /**
