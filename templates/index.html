@@ -102,6 +102,7 @@
             spaceweather: "{{ url_for('static', filename='css/modes/space-weather.css') }}",
             wefax: "{{ url_for('static', filename='css/modes/wefax.css') }}",
             morse: "{{ url_for('static', filename='css/modes/morse.css') }}",
+            cat: "{{ url_for('static', filename='css/modes/cat.css') }}",
             radiosonde: "{{ url_for('static', filename='css/modes/radiosonde.css') }}",
             meteor: "{{ url_for('static', filename='css/modes/meteor.css') }}",
             system: "{{ url_for('static', filename='css/modes/system.css') }}",
@@ -187,6 +188,7 @@
             wifi_locate: "{{ url_for('static', filename='js/modes/wifi_locate.js') }}?v={{ version }}&r=wflocate1",
             wefax: "{{ url_for('static', filename='js/modes/wefax.js') }}",
             morse: "{{ url_for('static', filename='js/modes/morse.js') }}?v={{ version }}&r=morse_iq12",
+            cat: "{{ url_for('static', filename='js/modes/cat.js') }}?v={{ version }}",
             ook: "{{ url_for('static', filename='js/modes/ook.js') }}?v={{ version }}&r=ook2",
             spaceweather: "{{ url_for('static', filename='js/modes/space-weather.js') }}",
             system: "{{ url_for('static', filename='js/modes/system.js') }}",
@@ -342,6 +344,10 @@
                             <button class="mode-card mode-card-sm" onclick="selectMode('morse')">
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="5" y2="12"/><line x1="7" y1="12" x2="13" y2="12"/><line x1="15" y1="12" x2="18" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg></span>
                                 <span class="mode-name">Morse</span>
+                            </button>
+                            <button class="mode-card mode-card-sm" onclick="selectMode('cat')">
+                                <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8" cy="12" r="2"/><line x1="13" y1="10" x2="19" y2="10"/><line x1="13" y1="14" x2="17" y2="14"/></svg></span>
+                                <span class="mode-name">CAT</span>
                             </button>
                             <button class="mode-card mode-card-sm" onclick="selectMode('ook')">
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3"/><path d="M19 12h3"/><rect x="5" y="8" width="4" height="8" rx="1"/><rect x="10" y="9" width="4" height="6" rx="1"/><rect x="15" y="7" width="4" height="10" rx="1"/></svg></span>
@@ -765,6 +771,8 @@
                 {% include 'partials/modes/wefax.html' %}
 
                 {% include 'partials/modes/morse.html' %}
+
+                {% include 'partials/modes/cat.html' %}
 
                 {% include 'partials/modes/ook.html' %}
 
@@ -2218,6 +2226,139 @@
                     </div>
                     <div class="spy-stations-grid" id="spyStationsGrid">
                         <!-- Station cards populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- CAT (Computer Aided Transceiver) main view -->
+                <div id="catVisuals" class="cat-visuals" style="display: none;">
+                    <details id="catConnectPanel" class="cat-vis-connect" open>
+                        <summary>
+                            <span class="cat-vis-connect-title">Connection</span>
+                            <span class="cat-vis-connect-summary" id="catConnectSummary">choose rig &amp; port</span>
+                        </summary>
+                        <div class="cat-vis-connect-body">
+                            <div class="cat-vis-row cat-vis-row--wide">
+                                <label class="cat-vis-field cat-vis-field--wide">
+                                    <span>Transceiver</span>
+                                    <select id="catRigSelect"></select>
+                                </label>
+                                <label class="cat-vis-field cat-vis-field--wide">
+                                    <span>Serial port</span>
+                                    <select id="catPortSelect"></select>
+                                </label>
+                                <button class="preset-btn cat-vis-rescan" type="button" onclick="CATMode.refreshPorts()">Rescan</button>
+                            </div>
+                            <p id="catRigNotes" class="cat-vis-rignotes"></p>
+                            <div class="cat-vis-row">
+                                <label class="cat-vis-field">
+                                    <span>Baud</span>
+                                    <select id="catBaudSelect"></select>
+                                </label>
+                                <label class="cat-vis-field">
+                                    <span>Data</span>
+                                    <select id="catDataBits">
+                                        <option value="5">5</option><option value="6">6</option>
+                                        <option value="7">7</option><option value="8" selected>8</option>
+                                    </select>
+                                </label>
+                                <label class="cat-vis-field">
+                                    <span>Parity</span>
+                                    <select id="catParity">
+                                        <option value="N" selected>None</option>
+                                        <option value="E">Even</option>
+                                        <option value="O">Odd</option>
+                                        <option value="M">Mark</option>
+                                        <option value="S">Space</option>
+                                    </select>
+                                </label>
+                                <label class="cat-vis-field">
+                                    <span>Stop</span>
+                                    <select id="catStopBits">
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="cat-vis-row cat-vis-row--actions">
+                                <label class="cat-vis-checkbox"><input type="checkbox" id="catAssertRts"> Assert RTS</label>
+                                <label class="cat-vis-checkbox"><input type="checkbox" id="catAssertDtr"> Assert DTR</label>
+                                <button class="preset-btn cat-vis-btn-connect" type="button" id="catConnectBtn" onclick="CATMode.connect()">Connect</button>
+                                <button class="preset-btn cat-vis-btn-disconnect" type="button" id="catDisconnectBtn" onclick="CATMode.disconnect()">Disconnect</button>
+                            </div>
+                            <p id="catConnStatus" class="cat-vis-rignotes">Disconnected.</p>
+                        </div>
+                    </details>
+                    <details id="catMacroPanel" class="cat-vis-macros">
+                        <summary class="cat-vis-connect-summary-row">
+                            <span class="cat-vis-connect-title">Macro Builder</span>
+                            <span class="cat-vis-connect-summary" id="catMacroSummary">command catalog &amp; saved macros</span>
+                        </summary>
+                        <div class="cat-vis-macro-body">
+                            <div class="cat-vis-macro-grid">
+                                <!-- LEFT: command catalog -->
+                                <div class="cat-vis-macro-col">
+                                    <div class="cat-vis-macro-toolbar">
+                                        <input type="text" id="catMacFilter" class="cat-vis-input-text" placeholder="filter commands…">
+                                        <select id="catMacCategory" class="cat-vis-input-text">
+                                            <option value="">all categories</option>
+                                        </select>
+                                    </div>
+                                    <div id="catMacCmdList" class="cat-vis-macro-list" role="listbox"
+                                         aria-label="Available CAT commands"></div>
+                                </div>
+                                <!-- RIGHT: macros (browse + edit) -->
+                                <div class="cat-vis-macro-col">
+                                    <div id="catMacBrowsePanel">
+                                        <div id="catMacList" class="cat-vis-macro-list" aria-label="Saved macros"></div>
+                                        <div class="cat-vis-macro-actions">
+                                            <button class="preset-btn" type="button" id="catMacNewBtn">+ New Macro</button>
+                                            <span id="catMacMsg" class="cat-vis-hint"></span>
+                                        </div>
+                                    </div>
+                                    <div id="catMacEditPanel" hidden>
+                                        <div class="cat-vis-macro-toolbar">
+                                            <input type="text" id="catMacName" class="cat-vis-input-text" placeholder="macro name…">
+                                            <button class="preset-btn" type="button" id="catMacCancelBtn">Cancel</button>
+                                        </div>
+                                        <div id="catMacStepList" class="cat-vis-macro-list" aria-label="Macro steps"></div>
+                                        <div class="cat-vis-macro-actions">
+                                            <button class="preset-btn cat-vis-btn-connect" type="button" id="catMacSaveBtn">Save</button>
+                                            <button class="preset-btn" type="button" id="catMacRunBtn">Run</button>
+                                            <button class="preset-btn" type="button" id="catMacClearBtn">Clear steps</button>
+                                            <span id="catMacMsgEdit" class="cat-vis-hint"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                    <div class="cat-vis-header">
+                        <div class="cat-vis-rig">
+                            <span class="cat-vis-label">RIG</span>
+                            <span class="cat-vis-rigname" id="catRigBadge">—</span>
+                        </div>
+                        <div class="cat-vis-status">
+                            <span class="cat-vis-dot" id="catStatusDot"></span>
+                            <span id="catStatusLabel">Disconnected</span>
+                        </div>
+                        <div class="cat-vis-toolbar">
+                            <label><input type="checkbox" id="catAutoscroll" checked> autoscroll</label>
+                            <label title="Periodic safety-net polling on the CAT bus. Off = AI-pushes only."><input type="checkbox" id="catPollingToggle" checked onchange="CATMode.togglePolling(this.checked)"> poll</label>
+                            <button class="preset-btn" type="button" onclick="CATMode.clearTerminal()">clear</button>
+                            <button class="preset-btn" type="button" id="catProbeBtn" onclick="CATMode.probe()" title="Send ID;/IF;/FA; and report what the rig sends back. Disconnect first.">Probe</button>
+                            <button class="preset-btn" type="button" onclick="CATMode.refreshStatus()">Poll IF;</button>
+                        </div>
+                    </div>
+                    <pre id="catTerminal" class="cat-vis-terminal"></pre>
+                    <div class="cat-vis-input">
+                        <span class="cat-vis-prompt">&gt;</span>
+                        <input type="text" id="catRawCmd" placeholder="type a CAT command, e.g. IF;  FA;  MD2;">
+                        <button class="preset-btn" type="button" onclick="CATMode.sendRaw()">Send</button>
+                        <span class="cat-vis-hint">trailing &quot;;&quot; added if you forget</span>
+                    </div>
+                    <div class="cat-vis-livestate">
+                        <div class="cat-vis-livestate-head">LIVE STATE</div>
+                        <pre id="catStateBox">(disconnected)</pre>
                     </div>
                 </div>
 
@@ -3844,6 +3985,7 @@
             websdr: { label: 'WebSDR', indicator: 'WEBSDR', outputTitle: 'HF/Shortwave WebSDR', group: 'intel' },
             waterfall: { label: 'Waterfall', indicator: 'WATERFALL', outputTitle: 'Spectrum Waterfall', group: 'signals' },
             morse: { label: 'Morse', indicator: 'MORSE', outputTitle: 'CW/Morse Decoder', group: 'signals' },
+            cat: { label: 'CAT', indicator: 'CAT', outputTitle: 'CAT Transceiver Control', group: 'signals' },
             system: { label: 'System', indicator: 'SYSTEM', outputTitle: 'System Health Monitor', group: 'system' },
             ook: { label: 'OOK Decoder', indicator: 'OOK', outputTitle: 'OOK Signal Decoder', group: 'signals' },
         };
@@ -4446,6 +4588,7 @@
                 rtlamr: () => { if (eventSource) { eventSource.close(); eventSource = null; } },
                 subghz: () => typeof SubGhz !== 'undefined' && SubGhz.destroy(),
                 morse: () => typeof MorseMode !== 'undefined' && MorseMode.destroy?.(),
+                cat: () => typeof CATMode !== 'undefined' && CATMode.destroy?.(),
                 spaceweather: () => typeof SpaceWeather !== 'undefined' && SpaceWeather.destroy?.(),
                 weathersat: () => typeof WeatherSat !== 'undefined' && WeatherSat.destroy?.(),
                 wefax: () => typeof WeFax !== 'undefined' && WeFax.destroy?.(),
@@ -4806,6 +4949,7 @@
             document.getElementById('spaceWeatherMode')?.classList.toggle('active', mode === 'spaceweather');
             document.getElementById('waterfallMode')?.classList.toggle('active', mode === 'waterfall');
             document.getElementById('morseMode')?.classList.toggle('active', mode === 'morse');
+            document.getElementById('catMode')?.classList.toggle('active', mode === 'cat');
             document.getElementById('meteorMode')?.classList.toggle('active', mode === 'meteor');
             document.getElementById('systemMode')?.classList.toggle('active', mode === 'system');
             document.getElementById('ookMode')?.classList.toggle('active', mode === 'ook');
@@ -4852,6 +4996,7 @@
             const meteorVisuals = document.getElementById('meteorVisuals');
             const systemVisuals = document.getElementById('systemVisuals');
             const droneVisuals = document.getElementById('droneVisuals');
+            const catVisuals = document.getElementById('catVisuals');
             if (wifiLayoutContainer) wifiLayoutContainer.classList.toggle('active', mode === 'wifi');
             if (btLayoutContainer) btLayoutContainer.classList.toggle('active', mode === 'bluetooth');
             if (satelliteVisuals) satelliteVisuals.style.display = mode === 'satellite' ? 'block' : 'none';
@@ -4897,11 +5042,12 @@
             if (meteorVisuals) meteorVisuals.style.display = mode === 'meteor' ? 'flex' : 'none';
             if (systemVisuals) systemVisuals.style.display = mode === 'system' ? 'flex' : 'none';
             if (droneVisuals) droneVisuals.style.display = mode === 'drone' ? 'flex' : 'none';
+            if (catVisuals) catVisuals.style.display = mode === 'cat' ? 'flex' : 'none';
 
             // Hide the signal feed output for modes that have their own visuals
             const outputEl = document.getElementById('output');
             const signalViewWrapEl = document.getElementById('signalViewWrap');
-            const modesWithVisuals = ['satellite', 'sstv', 'weathersat', 'sstv_general', 'wefax', 'aprs', 'wifi', 'bluetooth', 'tscm', 'spystations', 'meshtastic', 'meshcore', 'websdr', 'subghz', 'spaceweather', 'bt_locate', 'wifi_locate', 'waterfall', 'morse', 'meteor', 'system', 'ook', 'radiosonde', 'gps', 'drone'];
+            const modesWithVisuals = ['satellite', 'sstv', 'weathersat', 'sstv_general', 'wefax', 'aprs', 'wifi', 'bluetooth', 'tscm', 'spystations', 'meshtastic', 'meshcore', 'websdr', 'subghz', 'spaceweather', 'bt_locate', 'wifi_locate', 'waterfall', 'morse', 'meteor', 'system', 'ook', 'radiosonde', 'gps', 'drone', 'cat'];
             if (modesWithVisuals.includes(mode)) {
                 if (signalViewWrapEl) signalViewWrapEl.style.display = 'none';
                 if (outputEl) outputEl.style.display = 'none';
@@ -4974,7 +5120,7 @@
             const reconBtn = document.getElementById('reconBtn');
             const intelBtn = document.querySelector('[onclick="exportDeviceDB()"]');
             const reconPanel = document.getElementById('reconPanel');
-            const hideRecon = ['satellite', 'sstv', 'weathersat', 'sstv_general', 'wefax', 'gps', 'aprs', 'tscm', 'spystations', 'meshtastic', 'meshcore', 'websdr', 'subghz', 'spaceweather', 'waterfall', 'meteor', 'system'].includes(mode);
+            const hideRecon = ['satellite', 'sstv', 'weathersat', 'sstv_general', 'wefax', 'gps', 'aprs', 'tscm', 'spystations', 'meshtastic', 'meshcore', 'websdr', 'subghz', 'spaceweather', 'waterfall', 'meteor', 'system', 'cat'].includes(mode);
             if (reconPanel) reconPanel.style.display = (!hideRecon && reconEnabled) ? 'block' : 'none';
             if (reconBtn) reconBtn.style.display = hideRecon ? 'none' : 'inline-block';
             if (intelBtn) intelBtn.style.display = hideRecon ? 'none' : 'inline-block';
@@ -5026,7 +5172,7 @@
             document.getElementById('toolStatusSensor')?.classList.toggle('active', mode === 'sensor');
 
             // Hide output console for modes with their own visualizations
-            const hideStatusBar = ['satellite', 'websdr', 'subghz', 'spaceweather', 'waterfall', 'morse', 'meteor', 'system'].includes(mode);
+            const hideStatusBar = ['satellite', 'websdr', 'subghz', 'spaceweather', 'waterfall', 'morse', 'meteor', 'system', 'cat'].includes(mode);
             const statusBar = document.querySelector('.status-bar');
             if (statusBar) statusBar.style.display = hideStatusBar ? 'none' : 'flex';
 
@@ -5109,6 +5255,8 @@
                 if (typeof Waterfall !== 'undefined') Waterfall.init();
             } else if (mode === 'morse') {
                 MorseMode.init();
+            } else if (mode === 'cat') {
+                if (typeof CATMode !== 'undefined') CATMode.init();
             } else if (mode === 'radiosonde') {
                 initRadiosondeWaveform();
                 initRadiosondeMap();

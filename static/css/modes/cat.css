@@ -1,0 +1,581 @@
+/* CAT mode — scoped styles. Layout/colors inherit from the global theme. */
+
+#catMode pre {
+    margin: 0;
+}
+
+#catMode .form-group code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-cyan);
+}
+
+#catMode #catConnStatus.connected {
+    color: var(--accent);
+}
+
+#catMode #catConnStatus.disconnected {
+    color: var(--text-dim);
+}
+
+#catMode #catConnStatus.tx {
+    color: #ff5050;
+}
+
+#catMode .cat-supervisor-warning {
+    color: #ffb84d;
+    font-size: 11px;
+}
+
+/* --- Main view: terminal + raw input + live state ------------------------ */
+.cat-visuals {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 10px;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.cat-vis-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    flex-wrap: wrap;
+}
+
+.cat-vis-rig {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cat-vis-label {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+}
+
+.cat-vis-rigname {
+    color: var(--accent-cyan);
+    font-weight: bold;
+    letter-spacing: 0.04em;
+}
+
+.cat-vis-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+}
+
+.cat-vis-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    box-shadow: 0 0 4px currentColor;
+}
+
+.cat-vis-status.connected { color: var(--accent-green); }
+.cat-vis-status.connected .cat-vis-dot { background: var(--accent-green); }
+.cat-vis-status.tx        { color: var(--accent-red); }
+.cat-vis-status.tx        .cat-vis-dot { background: var(--accent-red); }
+
+.cat-vis-toolbar {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cat-vis-toolbar label {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cat-vis-terminal {
+    /* Note: NOT flex:1 — `resize: vertical` requires a definite size on the
+       element itself. Flex-grown items have their size computed by the
+       parent and the resize handle has nothing to write to. */
+    height: 360px;
+    min-height: 160px;
+    max-height: 80vh;
+    margin: 0;
+    padding: 8px 10px;
+    background: #13251e;
+    border: 1px solid var(--border-dim);
+    border-radius: 3px;
+    color: var(--accent-green, #1fec9b);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    overflow: auto;
+    resize: vertical;
+}
+
+.cat-vis-terminal .tx { color: var(--accent-cyan); }
+.cat-vis-terminal .rx { color: var(--accent-green, #6ee7b7); }
+.cat-vis-terminal .sys { color: var(--text-dim); font-style: italic; }
+.cat-vis-terminal .err { color: var(--accent-red); }
+
+.cat-vis-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 3px;
+}
+
+.cat-vis-prompt {
+    color: var(--accent-cyan);
+    font-family: var(--font-mono);
+    font-weight: bold;
+}
+
+.cat-vis-input input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--accent-green, #6ee7b7);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+}
+
+.cat-vis-hint {
+    color: var(--text-dim);
+    font-size: 10px;
+    font-style: italic;
+}
+
+.cat-vis-livestate {
+    padding: 0px 0px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 3px;
+}
+
+.cat-vis-livestate-head {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+}
+
+.cat-vis-livestate pre {
+    /*! margin: 0px; */
+    color: var(--accent-cyan);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    white-space: pre-wrap;
+    max-height: 140px;
+    overflow: auto;
+    background: #13251e;
+    padding: 8px 10px;
+}
+
+/* --- Connection panel (collapsible, mobile-friendly) --------------------- */
+.cat-vis-connect {
+    background: var(--bg-card);
+    border: 1px solid rgba(46, 125, 138, 0.23);
+    border-radius: 3px;
+    padding: 0;
+}
+
+.cat-vis-connect > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 8px 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-cyan);
+    user-select: none;
+    background: linear-gradient(-1deg, rgba(10, 12, 13, 0.5)90%, rgba(42, 177, 230, 0.69) 100%);
+}
+
+.cat-vis-connect > summary::-webkit-details-marker { display: none; }
+.cat-vis-connect > summary::before {
+    content: '▸';
+    color: var(--text-dim);
+    transition: transform 0.15s;
+}
+.cat-vis-connect[open] > summary::before { transform: rotate(90deg); }
+
+.cat-vis-connect-title {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: bold;
+}
+
+.cat-vis-connect-summary {
+    color: var(--text-dim);
+    font-size: 10px;
+    font-style: italic;
+}
+
+.cat-vis-connect-body {
+    padding: 8px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid var(--border-dim);
+    max-width: 960px;
+}
+
+.cat-vis-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.cat-vis-row--actions {
+    align-items: center;
+}
+
+.cat-vis-field {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 140px;
+    min-width: 110px;
+    max-width: 220px;
+    gap: 2px;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Transceiver + Serial port get a bit more room but still capped */
+.cat-vis-field--wide {
+    flex: 1 1 220px;
+    max-width: 340px;
+}
+
+.cat-vis-rescan {
+    align-self: flex-end;
+}
+
+.cat-vis-btn-connect {
+    color: var(--accent-green);
+    margin-left: auto;
+}
+
+.cat-vis-btn-disconnect {
+    color: var(--accent-red);
+}
+
+.cat-vis-field select,
+.cat-vis-field input {
+    background: #050a08;
+    border: 1px solid var(--border-dim);
+    color: var(--accent-cyan);
+    padding: 4px 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    border-radius: 2px;
+}
+
+.cat-vis-checkbox {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cat-vis-rignotes {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 10px;
+    font-style: italic;
+}
+
+/* --- Mobile / narrow viewports ------------------------------------------ */
+@media (max-width: 720px) {
+    .cat-visuals {
+        padding: 6px;
+        gap: 6px;
+    }
+
+    .cat-vis-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .cat-vis-field,
+    .cat-vis-field--wide {
+        flex: 1 1 100%;
+        max-width: none;
+        min-width: 0;
+    }
+
+    .cat-vis-rescan,
+    .cat-vis-btn-connect,
+    .cat-vis-btn-disconnect {
+        align-self: stretch;
+        margin-left: 0;
+    }
+
+    .cat-vis-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .cat-vis-toolbar {
+        margin-left: 0;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .cat-vis-terminal {
+        min-height: 160px;
+        max-height: 50vh;
+        font-size: 11px;
+    }
+
+    .cat-vis-input {
+        flex-wrap: wrap;
+    }
+
+    .cat-vis-input input {
+        flex: 1 1 100%;
+    }
+
+    .cat-vis-hint {
+        display: none;
+    }
+}
+
+/* ------------------------------------------------------------------------ */
+/*  Macro Builder                                                            */
+/*  Collapsible <details> panel that lives between the Connection details   */
+/*  and the CAT terminal. Mirrors the layout of the upstream port plugin    */
+/*  (port/source/plugins/panadapter/templates/frontpanel.html) but uses     */
+/*  intercept's CSS tokens — no inline styles, no hard-coded colors.        */
+/* ------------------------------------------------------------------------ */
+.cat-vis-macros {
+    border: 1px solid var: (--accent-green);
+    border-radius: 4px;
+    background: var(--bg-card, #0e1a1f);
+    padding: 0;
+    margin: 0;
+    background: linear-gradient(-1deg, rgba(10, 12, 13, 0.5) 97%, rgba(42, 177, 230, 0.69) 100%);
+    border: 1px solid rgba(46, 125, 138, 0.17);
+}
+
+.cat-vis-macros[open] > summary {/*! border-bottom: 1px solid rgba(46, 125, 138, 0.63); */}
+
+.cat-vis-macro-body {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cat-vis-macro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.cat-vis-macro-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.cat-vis-macro-toolbar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.cat-vis-input-text {
+    flex: 1 1 auto;
+    background: var(--bg-input, #0b1014);
+    color: var(--text, #d6e4ee);
+    border: 1px solid var(--border-dim);
+    padding: 4px 8px;
+    border-radius: 3px;
+    font: inherit;
+    font-size: 12px;
+    min-width: 0;
+}
+
+.cat-vis-macro-list {
+    height: 220px;
+    overflow: auto;
+    border: 1px solid var(--border-dim);
+    background: var(--bg-input, #0b1014);
+    padding: 4px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.cat-vis-macro-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.cat-vis-macro-actions .cat-vis-hint {
+    margin-left: auto;
+}
+
+.cat-vis-cmd-row {
+    padding: 3px 4px;
+    cursor: pointer;
+    border-bottom: 1px dotted var(--border-dim);
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.cat-vis-cmd-row:hover {
+    background: rgba(0, 212, 255, 0.08);
+}
+
+.cat-vis-cmd-cat {
+    color: var(--accent, #f0a020);
+    font-size: 10px;
+    text-transform: uppercase;
+    flex: 0 0 auto;
+    min-width: 60px;
+}
+
+.cat-vis-cmd-name {
+    color: var(--text, #d6e4ee);
+    font-weight: 600;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cat-vis-cmd-template {
+    color: var(--text-dim, #7e95a6);
+    font-size: 11px;
+    flex: 0 0 auto;
+}
+
+.cat-vis-macro-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 4px;
+    border-bottom: 1px dotted var(--border-dim);
+}
+
+.cat-vis-macro-row-name {
+    flex: 1 1 auto;
+    color: var(--text, #d6e4ee);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cat-vis-macro-btn {
+    padding: 2px 8px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 11px;
+    background: var(--bg-input, #0b1014);
+    border: 1px solid var(--border-dim);
+    color: var(--text, #d6e4ee);
+}
+
+.cat-vis-macro-btn--run {
+    color: var(--accent-green, #1fec9b);
+    border-color: var(--accent-green, #1fec9b);
+}
+
+.cat-vis-macro-btn--del {
+    color: var(--accent-red, #ff7070);
+    border-color: var(--accent-red, #ff7070);
+}
+
+.cat-vis-step-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 3px 0;
+    border-bottom: 1px dotted var(--border-dim);
+    flex-wrap: wrap;
+}
+
+.cat-vis-step-idx {
+    color: var(--text-dim, #7e95a6);
+    width: 22px;
+    flex: 0 0 auto;
+}
+
+.cat-vis-step-name {
+    flex: 1 1 100px;
+    color: var(--text, #d6e4ee);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cat-vis-step-tpl {
+    color: var(--text-dim, #6a7a87);
+    font-size: 11px;
+    flex: 0 0 auto;
+}
+
+.cat-vis-step-param,
+.cat-vis-step-delay {
+    background: var(--bg-card, #111820);
+    color: var(--text, #d6e4ee);
+    border: 1px solid var(--border-dim);
+    padding: 1px 4px;
+    font: inherit;
+    font-size: 11px;
+}
+
+.cat-vis-step-param  { width: 90px; }
+.cat-vis-step-delay  { width: 64px; }
+
+.cat-vis-macro-empty {
+    color: var(--text-dim, #7e95a6);
+    padding: 8px;
+    font-size: 12px;
+}
+
+@media (max-width: 720px) {
+    .cat-vis-macro-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cat-vis-macro-list {
+        height: 180px;
+    }
+}

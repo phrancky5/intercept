@@ -176,3 +176,64 @@ Each signal type has its own Flask blueprint:
 ## Testing Notes
 
 Tests use pytest with extensive mocking of external tools. Key fixtures in `tests/conftest.py`. Mock subprocess calls when testing decoder integration.
+
+
+---
+
+## Contribution Conventions (Fork → Upstream)
+
+This repository is a fork of upstream INTERCEPT. We intend to contribute features back, so **every change must be PR-ready and indistinguishable in style from existing modules**. When in doubt, mirror an existing module rather than invent.
+
+### Golden rules
+- **Additive over invasive.** Prefer adding new blueprints / partials / JS modules / CSS files over editing shared cores. Only touch `app.py`, `templates/index.html`, `routes/__init__.py` for the minimal wire-up.
+- **No upstream behavior changes** unless explicitly requested. Don't reformat untouched files.
+- **No new top-level dependencies** without justification. Reuse what's in `requirements.txt`.
+- **Server-side safety defaults to ON.** Any new control surface that can affect hardware must have a supervisor-style gate (see `routes/cat.py` for the reference).
+- **Don't commit secrets, large data dumps, or build artefacts.** `build.err`, `*.log`, `instance/`, `data/adsb/` stay untracked.
+
+### Backend conventions (Python)
+- **One blueprint per signal type** in `routes/<name>.py`, registered in `routes/__init__.py`. Mirror the structure of `routes/satellite.py` / `routes/sstv.py`.
+- **Singleton decoders** in `utils/<name>/` or `utils/<name>.py` (see `utils/sstv.py`, `utils/weather_sat.py`). Subprocesses managed with `safe_terminate()`.
+- **Validate at the boundary** — frequencies, gains, device indices through `utils/validation.py`. Never trust JSON payloads.
+- **SSE pattern:** `queue.Queue` + timeout + keepalive, fanned out via `sse_stream_fanout` when multiple tabs may subscribe (see `routes/cat.py`).
+- **Settings persistence** via `get_setting` / `set_setting` — no ad-hoc schema migrations for feature flags.
+- **Type hints + docstrings** on public functions. Keep it tight: docstring states *what* and *why*, not *how*.
+- **Run `ruff check .` and `black .`** before commit. `mypy .` on new modules.
+
+### Frontend conventions
+- **JS:** one IIFE module per mode in `static/js/modes/<name>.js` with a stable public surface: `init`, `destroy`, plus the action verbs the partial wires to `onclick`. Match `CATMode` / `WeatherSat` / `SSTV` shape.
+- **CSS:** scoped file `static/css/modes/<name>.css`. Use existing tokens (`--accent`, `--accent-cyan`, `--accent-green`, `--accent-red`, `--bg-card`, `--border-dim`, `--font-mono`, `--text-dim`). No raw hex colours unless matching an existing pattern.
+- **No inline styles in HTML** beyond temporary `display:none` toggles. Lift everything into the scoped CSS file. (We have inherited some inline `style="flex:N"` cases — clean those up when touching the row.)
+- **Mobile first:** every primary control (connect, disconnect, send, important toggles) lives in the main view, not sidebar-only. Add a `@media (max-width: 720px)` block that collapses rows to single-column.
+- **Resizable surfaces** (terminals, log panes) use `resize: vertical; overflow: auto;` with a `max-height` cap so they don't escape the viewport.
+- **No external CDN assets.** Vendor scripts live under `static/vendor/`.
+
+### Mode wire-up checklist (`templates/index.html`)
+Every new mode needs entries at ~12 points — miss one and the UI breaks subtly:
+1. CSS `<link>` include
+2. JS `<script>` include
+3. Welcome / mode card under the correct group
+4. Partial `{% include %}`
+5. `validModes` set
+6. `modeGroups` map
+7. `modeNames` map
+8. `modesWithVisuals` list (if a main-view panel exists)
+9. `modeCatalog` entry
+10. Visuals container `<div id="<mode>Visuals">` with `display:none`
+11. `switchMode()` branch (init + visuals display toggle)
+12. Destroy map entry
+
+### Tests
+- One `tests/test_<name>_*.py` per module. Mock all subprocess and serial I/O; never touch real hardware in CI.
+- Use existing fixtures in `tests/conftest.py`.
+- New API endpoints get at least a happy-path and a validation-failure test.
+
+### Documentation
+- Update or add `docs/<FEATURE>.md` for any user-facing mode. Follow `docs/CAT.md` shape: *What's in this PR → API table → Frontend → Testing in Docker*.
+- Don't create design docs unless requested; in-code docstrings + the user-facing doc are enough.
+
+### Commits & PRs
+- **Conventional commits**: `feat(cat): …`, `fix(cat): …`, `docs(cat): …`, `chore(docker): …`.
+- One logical change per commit; squash WIP before PR.
+- Reference the issue / discussion in the PR body, plus a *Testing done* section.
+- Branch naming: `feat/<short>`, `fix/<short>`. Our integration branch is `fork-patches`.
