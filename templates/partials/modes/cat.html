@@ -1,0 +1,62 @@
+<!-- CAT (Computer Aided Transceiver) MODE -->
+<div id="catMode" class="mode-content">
+    <div class="section">
+        <h3>CAT Transceiver Control</h3>
+        <p class="info-text">
+            Serial CAT control of a connected transceiver. Supervisor guardrails
+            (TX lock, band guard, power cap) are enforced server-side and
+            <strong>default to safe</strong>: TX is blocked until you unlock it.
+        </p>
+        <p class="info-text" style="font-size: 11px; color: var(--text-dim);">
+            Rig selection &amp; connection live in the main panel \u2192
+        </p>
+    </div>
+
+    <div class="section">
+        <h3>VFO &amp; Mode</h3>
+        <div class="form-group">
+            <label>VFO A (Hz)</label>
+            <div style="display: flex; gap: 4px;">
+                <input type="number" id="catVfoAHz" value="14060000" min="0" step="1">
+                <button class="preset-btn" type="button" onclick="CATMode.setVfo('A')">Set</button>
+                <button class="preset-btn" type="button" onclick="CATMode.selectVfo('A')">RX A</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>VFO B (Hz)</label>
+            <div style="display: flex; gap: 4px;">
+                <input type="number" id="catVfoBHz" value="14070000" min="0" step="1">
+                <button class="preset-btn" type="button" onclick="CATMode.setVfo('B')">Set</button>
+                <button class="preset-btn" type="button" onclick="CATMode.selectVfo('B')">RX B</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Mode</label>
+            <select id="catModeSelect" onchange="CATMode.setMode(this.value)">
+                <option>LSB</option><option selected>USB</option><option>CW</option>
+                <option>CW-R</option><option>AM</option><option>FM</option>
+                <option>FSK</option><option>FSK-R</option>
+            </select>
+        </div>
+        <div class="form-group checkbox-group">
+            <label><input type="checkbox" id="catSplit" onchange="CATMode.setSplit(this.checked)"> Split</label>
+            <label><input type="checkbox" id="catRit" onchange="CATMode.setRit(this.checked)"> RIT</label>
+            <button class="preset-btn" type="button" onclick="CATMode.clearRit()">Clear RIT</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Supervisor</h3>
+        <div class="form-group checkbox-group">
+            <label><input type="checkbox" id="catSupTxLocked" checked onchange="CATMode.updateSupervisor()"> TX locked</label>
+            <label><input type="checkbox" id="catSupBandGuard" checked onchange="CATMode.updateSupervisor()"> Band guard</label>
+        </div>
+        <div class="form-group">
+            <label>Max TX power (W) — 0 disables cap</label>
+            <input type="number" id="catSupMaxPower" value="0" min="0" max="1500" step="1" onchange="CATMode.updateSupervisor()">
+        </div>
+        <p class="info-text" style="font-size: 10px; color: var(--text-dim);">
+            With TX locked, <code>/cat/ptt</code> and raw passthrough are refused server-side.
+        </p>
+    </div>
+</div>

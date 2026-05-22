@@ -16,6 +16,7 @@ def register_blueprints(app):
     from .bluetooth import bluetooth_bp
     from .bluetooth_v2 import bluetooth_v2_bp
     from .bt_locate import bt_locate_bp
+    from .cat import cat_bp
     from .controller import controller_bp
     from .correlation import correlation_bp
     from .drone import drone_bp
@@ -95,6 +96,7 @@ def register_blueprints(app):
     app.register_blueprint(ook_bp)  # Generic OOK signal decoder
     app.register_blueprint(ground_station_bp)  # Ground station automation
     app.register_blueprint(drone_bp)  # Drone intelligence / UAV detection
+    app.register_blueprint(cat_bp)  # CAT transceiver control (Kenwood TS-850S etc.)
 
     # Exempt all API blueprints from CSRF (they use JSON, not form tokens)
     if _csrf:

@@ -25,6 +25,15 @@ services:
     # USB device mapping for all USB devices
     devices:
       - /dev/bus/usb:/dev/bus/usb
+      # CAT rig control over USB-serial. Uncomment / adjust for your adapter.
+      # The path must exist on the host BEFORE `docker compose up`.
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      # - /dev/ttyUSB1:/dev/ttyUSB1
+      # - /dev/ttyACM0:/dev/ttyACM0
+    # Add the host's `dialout` group GID so the container user can open /dev/tty*.
+    # `getent group dialout | cut -d: -f3` on the host gives the right number.
+    # group_add:
+    #   - "20"
     volumes:
       # Persist runtime output directories across container rebuilds.
       # Mount subdirectories individually so Python modules in /app/data are not shadowed.

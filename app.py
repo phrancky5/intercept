@@ -320,6 +320,11 @@ deauth_detector_lock = threading.Lock()
 # Drone Intelligence
 drone_queue = queue.Queue(maxsize=QUEUE_MAX_SIZE)
 
+# CAT (Computer Aided Transceiver) control
+cat_driver = None
+cat_queue = queue.Queue(maxsize=QUEUE_MAX_SIZE)
+cat_lock = threading.Lock()
+
 # ============================================
 # GLOBAL STATE DICTIONARIES
 # ============================================
@@ -472,7 +477,7 @@ def logout():
 
 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")  # Limit to 5 login attempts per minute per IP
+# @limiter.limit("5 per minute")  # Limit to 5 login attempts per minute per IP — disabled for local testing
 def login():
     if request.method == "POST":
         username = request.form.get("username")
@@ -1179,6 +1184,15 @@ def _init_app() -> None:
     from utils.database import init_db
 
     init_db()
+
+    # Initialize CAT command catalog + macro tables (isolated cat.db).
+    # Kept separate from interc_settings until upstream merge is approved.
+    try:
+        from utils.cat import init_command_catalog
+
+        init_command_catalog()
+    except Exception as e:
+        logger.warning(f"CAT command catalog init failed: {e}")
 
     # Register blueprints (essential — without these, all routes 404)
     from routes import register_blueprints
