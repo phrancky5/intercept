@@ -41,6 +41,14 @@ services:
       - ./data/radiosonde:/app/data/radiosonde
       - ./data/subghz:/app/data/subghz
       - ./data/adsb:/app/data/adsb
+      # Persist SQLite databases (intercept.db, cat.db) and generated images
+      # across container rebuilds. A NAMED VOLUME is used (not a host bind
+      # mount) because SQLite WAL mode requires mmap, which fails on Windows
+      # host -> Linux container bind mounts (`disk I/O error`). The volume
+      # lives under Docker's storage area; back it up via the backup script
+      # (which uses `docker cp`) or `docker run --rm -v intercept_instance:/d
+      # -v $PWD:/b alpine tar czf /b/instance.tgz -C /d .`.
+      - intercept_instance:/app/instance
       # Optional: mount logs directory
       # - ./logs:/app/logs
     environment:
@@ -102,6 +110,9 @@ services:
       - ./data/radiosonde:/app/data/radiosonde
       - ./data/subghz:/app/data/subghz
       - ./data/adsb:/app/data/adsb
+      # Persist SQLite databases and generated images across rebuilds.
+      # See note on the `intercept` service for why this is a named volume.
+      - intercept_instance:/app/instance
     environment:
       - TZ=${TZ:-UTC}
       - INTERCEPT_HOST=0.0.0.0
@@ -152,3 +163,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+volumes:
+  # Persists /app/instance (intercept.db, cat.db, secret.key, captured images)
+  # across `docker compose up --build`. Shared by `intercept` and
+  # `intercept-history` services so switching profiles keeps the same data.
+  intercept_instance:
+    name: intercept_instance

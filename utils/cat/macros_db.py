@@ -158,6 +158,33 @@ def seed_catalog(rig_id: str, commands: Iterable[dict]) -> int:
     """Insert built-ins for ``rig_id`` if the catalog has no rows yet."""
     if has_seed(rig_id):
         return 0
+    return _insert_builtins(rig_id, commands)
+
+
+def reseed_builtins(rig_id: str, commands: Iterable[dict]) -> int:
+    """Refresh the built-in catalog rows for ``rig_id``.
+
+    Deletes existing rows with ``is_builtin = 1`` and reinserts the
+    provided list. User-added commands (``is_builtin = 0``) are left
+    alone. Macro steps that referenced a deleted built-in row keep
+    their ``raw_command`` (already wire-ready); only the FK is reset to
+    ``NULL`` by the schema's ``ON DELETE SET NULL``.
+
+    Use this from :func:`init_command_catalog` so corrections to the
+    built-in catalog (e.g. dropping commands the rig never supported)
+    propagate to existing ``cat.db`` files on startup without
+    requiring manual DB surgery.
+    """
+    with _connect() as conn:
+        conn.execute(
+            'DELETE FROM interc_cat_commands '
+            'WHERE rig_id = ? AND is_builtin = 1',
+            (rig_id,),
+        )
+    return _insert_builtins(rig_id, commands)
+
+
+def _insert_builtins(rig_id: str, commands: Iterable[dict]) -> int:
     inserted = 0
     with _connect() as conn:
         for cmd in commands:

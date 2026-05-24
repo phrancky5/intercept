@@ -1,19 +1,18 @@
-"""Kenwood TS-850S CAT control driver.
+"""Yaesu FTX-1 Optima CAT control driver.
 
-Protocol: ASCII commands terminated with ';'. Default serial framing is
-**4800 bps, 1 start bit, 8 data bits, 2 stop bits, no parity** per the
-Kenwood TS-850S manual. The radio is sensitive to stop bits — use 2.
+Protocol: Yaesu CAT v2. ASCII commands terminated with ';'. Default
+serial settings 38400 8N1. Frequencies are zero-padded to 9 digits,
+mode codes are two-byte ``MDxMy`` selectors where ``x`` is the channel
+(``0`` = Main, ``1`` = Sub) and ``y`` is the mode digit/letter.
 
-Reference: Kenwood TS-850S Operating Manual, "Computer Control" section.
+Reference: docs/cat/FTX1_REFERENCE.md and the FTX-1 CAT operation
+manual. Where the FTX-1 differs from Kenwood ASCII (mode encoding,
+PTT verb ``TX1;``/``TX0;``, split toggle ``ST1;``/``ST0;``) the
+quirks are noted inline.
 
-This driver is also a reasonable starting point for protocol-compatible
-later Kenwoods (TS-590S, TS-2000, TS-480). Quirks differ — register
-distinct driver subclasses if needed rather than overloading this one.
-
-Threading: the driver owns a single daemon thread that serialises all
-serial I/O. Public methods enqueue commands and (optionally) wait for a
-response. Status updates parsed from the radio are published through the
-``on_status`` callback.
+Threading mirrors :class:`utils.cat.kenwood_ts850.KenwoodTS850Driver`:
+a single daemon thread serialises all serial I/O via a TX queue, and
+parsed status frames are pushed through ``on_status``.
 """
 
 from __future__ import annotations
@@ -28,7 +27,7 @@ from typing import Callable, Optional
 
 from utils.cat.base import RigDriver, RigState
 
-logger = logging.getLogger('intercept.cat.kenwood_ts850')
+logger = logging.getLogger('intercept.cat.yaesu_ftx1')
 
 try:
     import serial  # type: ignore
@@ -38,44 +37,45 @@ except ImportError:  # pragma: no cover — requirements include pyserial
     _HAS_SERIAL = False
 
 
-# TS-850 numeric mode codes. ``MODE_CODES`` is used to *decode* a mode
-# pushed by the rig. ``MODE_REVERSE`` excludes ``TUNE`` (code 8) on
-# purpose: ``MD8;`` makes the rig emit a steady carrier for ATU tuning
-# and is too dangerous to expose through ``set_mode()``. Use the raw
-# CAT field if you really need it.
+# FTX-1 mode codes (MD0M<x>;). Drawn from the FTX-1 CAT reference.
 MODE_CODES = {
-    1: 'LSB', 2: 'USB', 3: 'CW', 4: 'FM',
-    5: 'AM', 6: 'FSK', 7: 'CW-R', 8: 'TUNE', 9: 'FSK-R',
+    '1': 'LSB', '2': 'USB', '3': 'CW',  '4': 'FM',
+    '5': 'AM',  '6': 'FSK', '7': 'CW-R',
+    '8': 'DATA-L', '9': 'FSK-R',
+    'B': 'DATA-FM', 'C': 'FM-N', 'D': 'DATA-U', 'E': 'AM-N',
 }
-MODE_REVERSE = {v: k for k, v in MODE_CODES.items() if v != 'TUNE'}
+# Reverse map prefers the most common encoding for ambiguous labels.
+MODE_REVERSE = {
+    'LSB': '1', 'USB': '2', 'CW': '3', 'FM': '4', 'AM': '5',
+    'FSK': '6', 'CW-R': '7', 'DATA-L': '8', 'FSK-R': '9',
+    'DATA-FM': 'B', 'FM-N': 'C', 'DATA-U': 'D', 'AM-N': 'E',
+}
 
 
-class KenwoodTS850Driver(RigDriver):
-    """Serial CAT driver for the Kenwood TS-850S."""
+class YaesuFTX1Driver(RigDriver):
+    """Serial CAT driver for the Yaesu FTX-1 Optima."""
 
-    rig_id = 'kenwood_ts850'
+    rig_id = 'yaesu_ftx1'
 
-    DEFAULT_BAUD = 4800
-    SUPPORTED_BAUDS = (1200, 2400, 4800, 9600)
-    # AI mode pushes IF; on every dial/control change, so the safety-net
-    # poll only needs to ping things AI does not push (S-meter). At
-    # 4800 baud this keeps line load well below 5 %.
+    DEFAULT_BAUD = 38400
+    SUPPORTED_BAUDS = (4800, 9600, 19200, 38400, 115200)
+
+    # The FTX-1 pushes status via AI1 (auto-info) similar to recent
+    # Yaesus. With AI on we still safety-poll the S-meter; with AI off
+    # we poll IF; and SM0; more aggressively.
     POLL_INTERVAL = 1.5
     POLL_INTERVAL_NO_AI = 0.5
     READ_TIMEOUT = 0.2
 
-    # The TS-850 over an FTDI cable is famously sensitive to back-to-back
-    # writes — frames sent <30 ms apart are silently swallowed or merged
-    # by the radio's UART. Insert a short gap between consecutive CAT
-    # writes (50 ms is what `hamlib` settled on for the same family).
-    INTER_COMMAND_DELAY_S = 0.05
-    # After the port is opened (and RTS/DTR are set) the FTDI-USB stack
-    # takes a moment to settle; sending AI1;/IF; immediately races the
-    # radio's own input loop and misses the first reply. A quarter-second
-    # of quiet here makes "first connect" reliable.
-    POST_OPEN_SETTLE_S = 0.25
+    # Modern Yaesus over genuine USB are far happier than the TS-850
+    # with back-to-back writes, but cheap CH340/CP2102 cables still
+    # benefit from a small inter-command gap.
+    INTER_COMMAND_DELAY_S = 0.02
+    POST_OPEN_SETTLE_S = 0.15
 
-    _IF_RE = re.compile(r'^IF(\d{11})(.*);$')
+    # IF; payload: 9-digit freq, then trailing fields. Yaesu IF reply
+    # length is 28 chars + ';' on the FTX-1 (vs 38 on the TS-850).
+    _IF_RE = re.compile(r'^IF(\d{9})(.*);$')
 
     def __init__(
         self,
@@ -88,7 +88,7 @@ class KenwoodTS850Driver(RigDriver):
         assert_rts: bool = False,
         assert_dtr: bool = False,
         data_bits: int = 8,
-        stop_bits: int = 2,
+        stop_bits: int = 1,
         parity: str = 'N',
     ) -> None:
         if not _HAS_SERIAL:
@@ -135,58 +135,23 @@ class KenwoodTS850Driver(RigDriver):
             rtscts=False,
             dsrdtr=False,
         )
-        # RTS/DTR default OFF. Asserting RTS on common FTDI cables blocks
-        # CAT comms with the TS-850. The radio's CTS hold needed for TX is
-        # supposed to come from a hardware jumper on DIN pins 4-5, not the
-        # PC. Callers that need these lines driven can opt-in.
+        # FTX-1 ignores RTS/DTR for CAT; default both off and let the
+        # operator override per cable.
         try:
             self._ser.rts = bool(self.assert_rts)
             self._ser.dtr = bool(self.assert_dtr)
-        except Exception as exc:  # pragma: no cover — vendor quirk
+        except Exception as exc:  # pragma: no cover
             logger.debug('RTS/DTR set failed: %s', exc)
 
-        # Let the FTDI driver settle before the first frame leaves the
-        # host — see POST_OPEN_SETTLE_S.
         time.sleep(self.POST_OPEN_SETTLE_S)
 
         self._stop.clear()
         with self._state_lock:
             self._state.connected = True
         self._thread = threading.Thread(
-            target=self._run, name='cat-ts850', daemon=True
+            target=self._run, name='cat-ftx1', daemon=True
         )
         self._thread.start()
-
-        # ID handshake. Lets the operator find out *immediately* if the
-        # rig isn't replying (wrong baud / parity, dead cable, rig off)
-        # or if a different Kenwood is wired up — without that, we'd
-        # silently flood it with AI1;/IF; and the user would only see
-        # "no state updates" minutes later. ID008 is the TS-850's
-        # signature; anything else is logged but not treated as fatal
-        # (the rig might still respond to a useful subset).
-        try:
-            reply = self._send_query('ID', b'ID;', timeout=0.6)
-        except Exception as exc:  # pragma: no cover — defensive
-            reply = None
-            logger.debug('ID handshake raised: %s', exc)
-        if reply:
-            ident = reply.strip().rstrip(';')[2:]  # drop "ID" prefix
-            with self._state_lock:
-                self._state.rig_id = self.rig_id
-            if ident == '008':
-                logger.info('TS-850 handshake OK (ID008)')
-            else:
-                self._emit_io(
-                    'sys',
-                    f'rig replied ID{ident}, expected ID008 (TS-850) — '
-                    'some commands may be rejected with "?"',
-                )
-        else:
-            self._emit_io(
-                'sys',
-                'no reply to ID; — check baud/parity (4800 8N2), the '
-                'serial cable, and that the rig is powered on',
-            )
 
         if self.use_auto_info:
             self._tx_q.put(b'AI1;')
@@ -219,9 +184,9 @@ class KenwoodTS850Driver(RigDriver):
     # ---------- core API ----------------------------------------------------
     def set_vfo(self, which: str, hz: int) -> None:
         if which.upper() == 'A':
-            self._send(f'FA{int(hz):011d};')
+            self._send(f'FA{int(hz):09d};')
         elif which.upper() == 'B':
-            self._send(f'FB{int(hz):011d};')
+            self._send(f'FB{int(hz):09d};')
         else:
             raise ValueError(f'Unknown VFO {which!r}')
 
@@ -229,94 +194,67 @@ class KenwoodTS850Driver(RigDriver):
         code = MODE_REVERSE.get(mode.upper())
         if code is None:
             raise ValueError(f'Unknown mode {mode}')
-        self._send(f'MD{code};')
+        # Channel 0 = Main receiver.
+        self._send(f'MD0M{code};')
 
     def select_vfo(self, which: str) -> None:
-        if which.upper() == 'A':
-            self._send('FR0;')
-        elif which.upper() == 'B':
-            self._send('FR1;')
-        else:
+        # FTX-1 uses VS (VFO swap) and explicit FA/FB queries; there is
+        # no direct "FR" register like Kenwood. Closest analogue is the
+        # band/main toggle. Emulate by issuing a swap if the request
+        # disagrees with current state; otherwise no-op.
+        with self._state_lock:
+            current = self._state.active_vfo
+        target = which.upper()
+        if target not in ('A', 'B'):
             raise ValueError(f'Unknown VFO {which!r}')
+        if current != target:
+            self._send('SV;')
 
     def set_split(self, on: bool) -> None:
-        # On the TS-850 ``FTn;`` selects the TX source (0=VFO A, 1=VFO B,
-        # 2=Memory) — it is *not* a split toggle. Split exists implicitly
-        # whenever FT != FR. Drive FT relative to the current RX VFO so
-        # ``set_split(True)`` always produces split and ``set_split(False)``
-        # always clears it, regardless of which VFO is currently active.
-        with self._state_lock:
-            rx_vfo = (self._state.active_vfo or 'A').upper()
-        if on:
-            ft = '1' if rx_vfo == 'A' else '0'
-        else:
-            ft = '0' if rx_vfo == 'A' else '1'
-        self._send(f'FT{ft};')
+        self._send('ST1;' if on else 'ST0;')
 
     def set_rit(self, on: bool) -> None:
+        # FTX-1 RIT: RT0; / RT1; on the main channel.
         self._send('RT1;' if on else 'RT0;')
 
     def clear_rit(self) -> None:
+        # Set RIT offset to 0 — RC clears Clarifier on Yaesu.
         self._send('RC;')
 
     def ptt(self, tx: bool) -> None:
-        self._send('TX;' if tx else 'RX;')
+        self._send('TX1;' if tx else 'TX0;')
 
     # ---------- extended controls -------------------------------------------
-    # NOTE: the TS-850 manual only documents this command set:
-    #   AI, DN/UP, FA/FB, FL, FR/FT, ID, IF, LK, MC, MD, MR, MW, MX,
-    #   PT, RC, RD/RU, RM, RT, RX/TX, SC, SH/SL, SM, TN, VR, XT.
-    # Anything outside that list (GT/AG/RG/SQ/NB/RA/KS/PC ...) is silently
-    # rejected by the radio ("?" reply or no reply) and was generating a
-    # cascade of error lines on every connect. Those methods are
-    # intentionally *not* implemented here — the base class's
-    # ``NotImplementedError`` propagates through ``_dispatch_simple`` in
-    # ``routes/cat.py`` as a clean 400 "unsupported by driver" so the UI
-    # can grey the controls out without hitting the wire. A future
-    # TS-590S / TS-2000 driver can subclass and add what *it* supports.
+    def set_power(self, watts: int) -> None:
+        v = max(5, min(100, int(watts)))
+        self._send(f'PC{v:03d};')
 
-    def set_filter(self, slot: int) -> None:
-        # Manual: FLnn; with nn = 00 (wide) .. 20 (narrow).
-        v = max(0, min(20, int(slot)))
-        self._send(f'FL{v:02d};')
+    def set_noise_blanker(self, on: bool) -> None:
+        # Yaesu NB takes a channel-prefixed argument: NB0<on>; for main.
+        self._send('NB01;' if on else 'NB00;')
 
-    def vfo_step(self, direction: str) -> None:
-        if direction.lower() == 'up':
-            self._send('UP;')
-        elif direction.lower() == 'down':
-            self._send('DN;')
-        else:
-            raise ValueError(f'Unknown step direction {direction!r}')
-
-    def set_memory_channel(self, ch: int) -> None:
-        # Manual: MCnn; — 2 digits, 00..99.
-        v = max(0, min(99, int(ch)))
-        self._send(f'MC{v:02d};')
-
-    def select_memory(self) -> None:
-        self._send('FR2;')
+    def set_agc(self, value: int) -> None:
+        # Yaesu AGC: GT0<x>; where x: 0=slow, 1=mid, 2=fast, 3=off.
+        v = max(0, min(3, int(value)))
+        self._send(f'GT0{v};')
 
     def request_status(self) -> None:
-        """Force a fresh poll of state. Only commands the TS-850 actually
-        implements — see the note above ``set_filter`` for why the
-        AGC/AF/RF/SQ/NB/RA/KS/PC family is omitted."""
-        for cmd in (
-            b'IF;', b'FA;', b'FB;', b'FR;', b'FT;', b'MD;',
-            b'RT;', b'XT;', b'SM;', b'FL;', b'MC;',
-        ):
+        for cmd in (b'IF;', b'FA;', b'FB;', b'MD0;', b'SM0;', b'ST;'):
             self._tx_q.put(cmd)
 
     def send_raw(self, cmd: str) -> Optional[str]:
-        """Send an arbitrary CAT command. If it looks like a query the
-        response (up to 0.5 s) is returned."""
         if not cmd.endswith(';'):
             cmd += ';'
-        if len(cmd) <= 3 and cmd[0:2].isalpha():
-            return self._send_query(cmd[:2], cmd.encode('ascii'), timeout=0.5)
+        data = cmd.encode('ascii')
+        # Queries on Yaesu are 3-char (XX;) or 4-char with a channel
+        # (XX0;); treat anything <=4 bytes ending in ';' as a query and
+        # wait for the prefix's response.
+        if len(cmd) <= 4 and cmd[0:2].isalpha():
+            return self._send_query(cmd[:2], data, timeout=0.5)
         self._send(cmd)
         return None
 
-    # ---------- internals ----------------------------------------------------
+    # ---------- internals ---------------------------------------------------
     def _send(self, cmd: str | bytes) -> None:
         data = cmd.encode('ascii') if isinstance(cmd, str) else cmd
         self._tx_q.put(data)
@@ -336,20 +274,14 @@ class KenwoodTS850Driver(RigDriver):
             with self._pending_lock:
                 self._pending.pop(prefix, None)
 
-    # Consecutive serial I/O failures tolerated before we declare the link
-    # dead, close the port, and ask the user to reconnect. Tuned for the
-    # common Docker-Desktop + usbipd-win case where a re-attached device
-    # briefly disappears (a handful of failures) vs. an unplugged adapter
-    # (sustained failures). Roughly ~5 s at the 0.5 s back-off interval.
+    # See KenwoodTS850Driver.SERIAL_FAIL_LIMIT — same Docker/usbipd-win
+    # situation applies to any USB-serial radio.
     SERIAL_FAIL_LIMIT = 10
 
     def _run(self) -> None:
         fail_count = 0
         while not self._stop.is_set():
-            # 1) drain TX queue. The TS-850 cannot keep up with
-            # back-to-back writes, so we space them by
-            # INTER_COMMAND_DELAY_S and flush each frame to push it
-            # through the USB-serial bridge immediately.
+            # 1) drain TX queue with inter-command pacing + flush.
             try:
                 while True:
                     data = self._tx_q.get_nowait()
@@ -371,17 +303,16 @@ class KenwoodTS850Driver(RigDriver):
                                 return
                     self._tx_q.task_done()
                     if not self._tx_q.empty():
-                        # Only sleep when another frame is pending —
-                        # avoids adding latency on lone commands.
                         time.sleep(self.INTER_COMMAND_DELAY_S)
             except queue.Empty:
                 pass
 
-            # 2) read bytes
             ser = self._ser
             if ser is None:
                 time.sleep(0.1)
                 continue
+
+            # 2) read bytes
             try:
                 try:
                     waiting = ser.in_waiting or 0
@@ -419,10 +350,10 @@ class KenwoodTS850Driver(RigDriver):
                     self._last_poll = now
                     if not self.use_auto_info:
                         self._tx_q.put(b'IF;')
-                    self._tx_q.put(b'SM;')
+                    self._tx_q.put(b'SM0;')
 
     # ---------- parser ------------------------------------------------------
-    def _parse(self, frame: str) -> None:  # noqa: C901 — clearer as one switch
+    def _parse(self, frame: str) -> None:
         if len(frame) < 3:
             return
         prefix = frame[:2]
@@ -442,57 +373,42 @@ class KenwoodTS850Driver(RigDriver):
                 self._parse_fx(frame, 'A')
             elif prefix == 'FB':
                 self._parse_fx(frame, 'B')
-            elif prefix == 'MD' and len(frame) >= 4:
-                code = int(frame[2])
+            elif prefix == 'MD' and len(frame) >= 6:
+                # MD0M<x>; — character at index 4 is the mode code.
+                ch = frame[4]
                 with self._state_lock:
-                    self._state.mode = MODE_CODES.get(code, self._state.mode)
+                    self._state.mode = MODE_CODES.get(ch, self._state.mode)
                     self._state.last_update = time.time()
                 self._emit()
-            elif prefix == 'SM' and len(frame) >= 6:
+            elif prefix == 'SM' and len(frame) >= 7:
+                # SM0<nnn>;  (channel 0, 3-digit value 0..255-ish)
                 try:
-                    smv = int(frame[2:].rstrip(';'))
+                    smv = int(frame[3:].rstrip(';'))
                     with self._state_lock:
                         self._state.s_meter = smv
                         self._state.last_update = time.time()
                     self._emit()
                 except ValueError:
                     pass
-            elif prefix == 'FR' and len(frame) >= 4:
+            elif prefix == 'ST' and len(frame) >= 4:
                 with self._state_lock:
-                    self._state.active_vfo = 'A' if frame[2] == '0' else 'B'
-                    self._state.in_memory = frame[2] == '2'
-                self._emit()
-            elif prefix == 'FT' and len(frame) >= 4:
-                txv = 'A' if frame[2] == '0' else 'B'
-                with self._state_lock:
-                    self._state.tx_vfo = txv
-                    self._state.split = (txv != self._state.active_vfo)
+                    self._state.split = (frame[2] == '1')
                 self._emit()
             elif prefix == 'RT' and len(frame) >= 4:
                 with self._state_lock:
                     self._state.rit_on = (frame[2] == '1')
                 self._emit()
-            elif prefix == 'XT' and len(frame) >= 4:
+            elif prefix == 'TX' and len(frame) >= 4:
                 with self._state_lock:
-                    self._state.xit_on = (frame[2] == '1')
+                    self._state.ptt = (frame[2] == '1')
                 self._emit()
-            elif prefix == 'GT' and len(frame) >= 6:
-                with self._state_lock:
-                    self._state.agc = int(frame[2:5])
-                self._emit()
-            elif prefix == 'FL' and len(frame) >= 5:
-                with self._state_lock:
-                    self._state.filter_slot = int(frame[2:4])
-                self._emit()
-            elif prefix == 'MC' and len(frame) >= 5:
-                # Manual: MCnn; — 2 digits.
-                with self._state_lock:
-                    self._state.memory_ch = int(frame[2:4])
-                self._emit()
-            # GT/NB/RA/AG/RG/SQ/KS/PC are *not* TS-850 commands — see the
-            # note above ``set_filter``. The rig never emits them, so we
-            # intentionally have no parser branches for them. A future
-            # TS-590S subclass can extend ``_parse``.
+            elif prefix == 'PC' and len(frame) >= 6:
+                try:
+                    with self._state_lock:
+                        self._state.power_w = int(frame[2:5])
+                    self._emit()
+                except ValueError:
+                    pass
         except (ValueError, IndexError) as exc:
             logger.debug('Parse error on %r: %s', frame, exc)
 
@@ -505,39 +421,34 @@ class KenwoodTS850Driver(RigDriver):
         except ValueError:
             return
         tail = m.group(2)
-
-        # IF; tail layout (selected fields):
-        #   tail[0:4]  step (unused)
-        #   tail[4:9]  RIT offset (signed 5-digit)
-        #   tail[9]    RIT on/off
-        #   tail[10]   XIT on/off
-        #   tail[15]   TX flag
-        #   tail[16]   mode (1..9)
-        #   tail[17]   RX VFO (0=A, 1=B, 2=mem)
-        #   tail[19]   split flag
-        rit_hz = 0
+        # Yaesu FTX-1 IF; tail (positions, 0-indexed past the 9 freq digits):
+        #   tail[0:4]  Clarifier offset (4 digits)
+        #   tail[4]    RX clarifier on/off
+        #   tail[5]    TX clarifier on/off
+        #   tail[6:8]  Mode (1 char) + reserved
+        #   tail[8]    VFO memory channel banking flag
+        #   tail[9]    Mode (effective)
+        #   tail[10]   RX VFO (0=A,1=B)
+        #   tail[11]   Scan (ignored)
+        #   tail[12]   Split (0/1)
+        # The exact layout varies across Yaesu firmware revisions — only
+        # consume the fields we are confident in and leave the rest as-is.
         rit_on = False
         xit_on = False
-        ptt = False
         mode_str: Optional[str] = None
         rx_vfo: Optional[str] = None
         split = False
         try:
-            if len(tail) >= 9:
-                rit_hz = int(tail[4:9])
+            if len(tail) >= 5:
+                rit_on = tail[4] == '1'
+            if len(tail) >= 6:
+                xit_on = tail[5] == '1'
             if len(tail) >= 10:
-                rit_on = tail[9] == '1'
+                mode_str = MODE_CODES.get(tail[9])
             if len(tail) >= 11:
-                xit_on = tail[10] == '1'
-            if len(tail) >= 16:
-                ptt = tail[15] == '1'
-            if len(tail) >= 17:
-                code = int(tail[16]) if tail[16].isdigit() else 0
-                mode_str = MODE_CODES.get(code)
-            if len(tail) >= 18:
-                rx_vfo = 'A' if tail[17] == '0' else ('B' if tail[17] == '1' else 'M')
-            if len(tail) >= 20:
-                split = tail[19] == '1'
+                rx_vfo = 'A' if tail[10] == '0' else 'B'
+            if len(tail) >= 13:
+                split = tail[12] == '1'
         except (ValueError, IndexError):
             pass
 
@@ -545,36 +456,31 @@ class KenwoodTS850Driver(RigDriver):
             if rx_vfo == 'A':
                 self._state.vfo_a_hz = freq
                 self._state.active_vfo = 'A'
-                self._state.in_memory = False
             elif rx_vfo == 'B':
                 self._state.vfo_b_hz = freq
                 self._state.active_vfo = 'B'
-                self._state.in_memory = False
             else:
                 if self._state.active_vfo == 'A':
                     self._state.vfo_a_hz = freq
                 else:
                     self._state.vfo_b_hz = freq
-                self._state.in_memory = rx_vfo == 'M'
-            self._state.rit_hz = rit_hz
             self._state.rit_on = rit_on
             self._state.xit_on = xit_on
-            self._state.ptt = ptt
             self._state.split = split
             if mode_str:
                 self._state.mode = mode_str
             self._state.last_update = time.time()
         self._emit()
 
-        # If we never saw VFO B yet, ask for it explicitly.
         if rx_vfo == 'A' and self._state.vfo_b_hz == 0:
             self._tx_q.put(b'FB;')
 
     def _parse_fx(self, frame: str, which: str) -> None:
-        if len(frame) < 14:
+        # Yaesu FA/FB; reply is "FA<9-digit>;"
+        if len(frame) < 12:
             return
         try:
-            hz = int(frame[2:13])
+            hz = int(frame[2:11])
         except ValueError:
             return
         with self._state_lock:
@@ -590,7 +496,7 @@ class KenwoodTS850Driver(RigDriver):
             return
         try:
             self.on_status(self.state())
-        except Exception as exc:  # pragma: no cover — defensive
+        except Exception as exc:  # pragma: no cover
             logger.debug('on_status callback error: %s', exc)
 
     def _emit_io(self, direction: str, payload) -> None:
@@ -602,18 +508,14 @@ class KenwoodTS850Driver(RigDriver):
             else:
                 text = str(payload)
             self.on_io(direction, text)
-        except Exception as exc:  # pragma: no cover — defensive
+        except Exception as exc:  # pragma: no cover
             logger.debug('on_io callback error: %s', exc)
 
     def _fail_link(self, exc: BaseException) -> None:
         """Mark the serial link as lost after repeated I/O failures.
 
-        Common trigger: Docker Desktop + usbipd-win briefly drops a
-        re-attached USB-serial device; pyserial keeps raising on every
-        read/write. We close the port, flip ``state.connected`` to False
-        so the SSE state stream tells the UI to switch to "Disconnected",
-        and push a ``sys`` line into the terminal so the operator sees
-        *why* the link went away without having to check server logs.
+        See ``KenwoodTS850Driver._fail_link`` for rationale — same
+        Docker Desktop + usbipd-win pattern applies here.
         """
         logger.warning('CAT serial link declared dead: %s', exc)
         try:

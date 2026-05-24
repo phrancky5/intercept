@@ -8,6 +8,7 @@ from utils.cat.registry import (
     get_descriptor,
     list_descriptors,
 )
+from utils.cat.yaesu_ftx1 import YaesuFTX1Driver
 
 
 def test_registry_contains_ts850():
@@ -20,10 +21,20 @@ def test_registry_contains_ts850():
     assert desc.default_baud == 4800
 
 
+def test_registry_contains_ftx1():
+    desc = get_descriptor('yaesu_ftx1')
+    assert desc is not None
+    assert desc.vendor == 'Yaesu'
+    assert desc.driver_class is YaesuFTX1Driver
+    assert desc.implemented is True
+    assert desc.default_baud == 38400
+    assert desc.stop_bits == 1
+
 def test_registry_stubs_have_no_driver():
-    """Every non-TS-850 rig is currently a documentation stub."""
+    """Rigs without a wired driver are documentation stubs."""
+    implemented_ids = {'kenwood_ts850', 'yaesu_ftx1'}
     for rig_id, desc in RIG_REGISTRY.items():
-        if rig_id == 'kenwood_ts850':
+        if rig_id in implemented_ids:
             continue
         assert desc.driver_class is None, f'{rig_id} should be a stub'
         assert desc.implemented is False

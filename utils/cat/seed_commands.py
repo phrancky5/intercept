@@ -29,6 +29,13 @@ from __future__ import annotations
 
 # ---------------------------------------------------------------------------
 # Kenwood TS-850S — 4800 8N2, 11-digit frequency.
+#
+# Scope is intentionally limited to commands documented in the TS-850S
+# External Control Operation manual: AI, DN/UP, FA/FB, FL, FR/FT, ID,
+# IF, LK, MC, MD, MR, MW, MX, PT, RC, RD/RU, RM, RT, RX/TX, SC, SH/SL,
+# SM, TN, VR, XT. CAT for AGC/AF/RF/SQ/NB/RA/KS/PC was added on later
+# Kenwoods (TS-590S, TS-2000) and is NOT implemented on the TS-850 —
+# putting them in the macro catalog only ever produced "?" replies.
 # ---------------------------------------------------------------------------
 TS850_COMMANDS: list[dict] = [
     # --- frequency ---
@@ -63,57 +70,75 @@ TS850_COMMANDS: list[dict] = [
     dict(name='Mode CW-R',  category='mode', raw_template='MD7;', description='Set CW-Reverse'),
     dict(name='Mode FSK-R', category='mode', raw_template='MD9;', description='Set FSK-Reverse'),
 
-    # --- split / RIT / XIT ---
-    dict(name='Split ON',  category='split', raw_template='FT1;', description='TX from VFO B'),
-    dict(name='Split OFF', category='split', raw_template='FT0;', description='TX from VFO A'),
-    dict(name='RIT ON',    category='rit',   raw_template='RT1;'),
-    dict(name='RIT OFF',   category='rit',   raw_template='RT0;'),
-    dict(name='Clear RIT', category='rit',   raw_template='RC;'),
-    dict(name='XIT ON',    category='rit',   raw_template='XT1;'),
-    dict(name='XIT OFF',   category='rit',   raw_template='XT0;'),
+    # --- TX source / split ---
+    # FTn sets the TX source (0=VFO A, 1=VFO B, 2=Memory). Split exists
+    # implicitly when FT != FR; there is no dedicated split toggle on
+    # the TS-850.
+    dict(name='TX from VFO A',  category='split', raw_template='FT0;',
+         description='Set TX source = VFO A (split if RX is on B)'),
+    dict(name='TX from VFO B',  category='split', raw_template='FT1;',
+         description='Set TX source = VFO B (split if RX is on A)'),
+    dict(name='TX from Memory', category='split', raw_template='FT2;',
+         description='Set TX source = memory channel'),
+
+    # --- RIT / XIT ---
+    dict(name='RIT ON',         category='rit', raw_template='RT1;'),
+    dict(name='RIT OFF',        category='rit', raw_template='RT0;'),
+    dict(name='Clear RIT',      category='rit', raw_template='RC;'),
+    dict(name='RIT Step Up',    category='rit', raw_template='RU;',
+         description='Step RIT offset up by one increment'),
+    dict(name='RIT Step Down',  category='rit', raw_template='RD;',
+         description='Step RIT offset down by one increment'),
+    dict(name='XIT ON',         category='rit', raw_template='XT1;'),
+    dict(name='XIT OFF',        category='rit', raw_template='XT0;'),
 
     # --- PTT (Supervisor-gated on the route layer) ---
     dict(name='PTT ON (TX)',  category='ptt', raw_template='TX;',
          description='Key the transmitter — Supervisor TX-lock must be off'),
     dict(name='PTT OFF (RX)', category='ptt', raw_template='RX;'),
 
-    # --- audio ---
-    dict(name='AF Gain', category='audio', raw_template='AG0{value:03d};',
-         param_label='AF gain (0-255)', param_type='int', param_default='80'),
-    dict(name='RF Gain', category='audio', raw_template='RG{value:03d};',
-         param_label='RF gain (0-255)', param_type='int', param_default='255'),
-    dict(name='Squelch', category='audio', raw_template='SQ0{value:03d};',
-         param_label='Squelch (0-255)', param_type='int', param_default='0'),
-
-    # --- DSP / AGC / NB / ATT ---
-    dict(name='AGC Slow', category='dsp', raw_template='GT000;'),
-    dict(name='AGC Fast', category='dsp', raw_template='GT001;'),
-    dict(name='AGC OFF',  category='dsp', raw_template='GT002;'),
+    # --- front-end / DSP (only what the TS-850 actually implements) ---
     dict(name='Filter Slot', category='dsp', raw_template='FL{slot:02d};',
-         param_label='Slot (0-99)', param_type='int', param_default='0'),
-    dict(name='NB ON',    category='dsp', raw_template='NB1;'),
-    dict(name='NB OFF',   category='dsp', raw_template='NB0;'),
-    dict(name='Attenuator', category='dsp', raw_template='RA{step:02d};',
-         param_label='Step (0-3)', param_type='int', param_default='0'),
+         param_label='Slot (0=wide … 20=narrow)', param_type='int', param_default='0'),
+    dict(name='AIP ON',  category='dsp', raw_template='MX1;',
+         description='Advanced Intercept Point ON (HF front-end protection)'),
+    dict(name='AIP OFF', category='dsp', raw_template='MX0;'),
+    dict(name='CW Pitch', category='dsp', raw_template='PT{value:02d};',
+         param_label='Pitch (0-12)', param_type='int', param_default='6'),
 
-    # --- memory / keyer / power ---
-    dict(name='Memory Channel', category='memory', raw_template='MC{ch:03d};',
-         param_label='Channel (0-99)', param_type='int', param_default='0'),
-    dict(name='Keyer Speed', category='keyer', raw_template='KS{wpm:03d};',
-         param_label='WPM (10-60)', param_type='int', param_default='22'),
-    dict(name='TX Power', category='power', raw_template='PC{watts:03d};',
-         param_label='Watts (0-100)', param_type='int', param_default='10'),
+    # --- memory ---
+    dict(name='Memory Channel', category='memory', raw_template='MC{ch:02d};',
+         param_label='Channel (0-99)', param_type='int', param_default='0',
+         description='Select memory channel (2 digits per TS-850 manual)'),
+    dict(name='Memory Read', category='memory', raw_template='MR{section};',
+         param_label='Section (0 or 1)', param_type='int', param_default='0',
+         expects_response=True,
+         description='Read current memory channel contents'),
+
+    # --- scan / lock / tones ---
+    dict(name='Scan ON',  category='misc', raw_template='SC1;'),
+    dict(name='Scan OFF', category='misc', raw_template='SC0;'),
+    dict(name='Lock ON',  category='misc', raw_template='LK1;',
+         description='Lock front panel'),
+    dict(name='Lock OFF', category='misc', raw_template='LK0;'),
+    dict(name='CTCSS Tone', category='misc', raw_template='TN{tone:02d};',
+         param_label='Tone number (01-38)', param_type='int', param_default='01'),
 
     # --- status ---
+    dict(name='Identify',       category='status', raw_template='ID;',
+         expects_response=True, description='Read model ID (TS-850 = ID008)'),
     dict(name='Query IF (bulk status)', category='status', raw_template='IF;',
          expects_response=True),
-    dict(name='Query S-meter', category='status', raw_template='SM;',
+    dict(name='Query S-meter',  category='status', raw_template='SM;',
          expects_response=True),
-    dict(name='Query Mode',    category='status', raw_template='MD;',
+    dict(name='Read Meter',     category='status', raw_template='RM;',
+         expects_response=True,
+         description='Read non-S meter (SWR / ALC / COMP depending on selection)'),
+    dict(name='Query Mode',     category='status', raw_template='MD;',
          expects_response=True),
-    dict(name='AutoInfo ON',   category='status', raw_template='AI1;',
+    dict(name='AutoInfo ON',    category='status', raw_template='AI1;',
          description='Radio pushes IF; on every change'),
-    dict(name='AutoInfo OFF',  category='status', raw_template='AI0;'),
+    dict(name='AutoInfo OFF',   category='status', raw_template='AI0;'),
 ]
 
 

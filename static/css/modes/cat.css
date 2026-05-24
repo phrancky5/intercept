@@ -1,4 +1,14 @@
-/* CAT mode — scoped styles. Layout/colors inherit from the global theme. */
+/* CAT mode — scoped styles.
+ * Uses INTERCEPT design tokens (see static/css/core/variables.css):
+ *   colors  — --bg-card / --bg-elevated / --accent-* / --text-* / --border-color
+ *   spacing — --space-1..4
+ *   radii   — --radius-sm / --radius-md
+ *   type    — --font-mono / --text-xs
+ * No hard-coded palette colors. No layout-style inlines in partials.
+ * Surfaces use --bg-card / --bg-elevated so the light theme inherits cleanly.
+ */
+
+/* --- Sidebar content (templates/partials/modes/cat.html) ---------------- */
 
 #catMode pre {
     margin: 0;
@@ -11,7 +21,7 @@
 }
 
 #catMode #catConnStatus.connected {
-    color: var(--accent);
+    color: var(--accent-green);
 }
 
 #catMode #catConnStatus.disconnected {
@@ -19,12 +29,27 @@
 }
 
 #catMode #catConnStatus.tx {
-    color: #ff5050;
+    color: var(--accent-red);
 }
 
 #catMode .cat-supervisor-warning {
-    color: #ffb84d;
+    color: var(--accent-orange);
     font-size: 11px;
+}
+
+/* Small inline utility classes (replace style="…" in cat.html). */
+#catMode .cat-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+#catMode .cat-hint--xs {
+    font-size: 10px;
+}
+
+#catMode .cat-inline-row {
+    display: flex;
+    gap: var(--space-1);
 }
 
 /* --- Main view: terminal + raw input + live state ------------------------ */
@@ -33,19 +58,19 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    padding: 10px;
-    gap: 8px;
+    padding: var(--space-3);
+    gap: var(--space-2);
     box-sizing: border-box;
 }
 
 .cat-vis-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 10px;
+    gap: var(--space-3);
+    padding: 6px var(--space-3);
     background: var(--bg-card);
-    border: 1px solid var(--border-dim);
-    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
     font-family: var(--font-mono);
     font-size: 11px;
     flex-wrap: wrap;
@@ -78,11 +103,11 @@
 }
 
 .cat-vis-dot {
-    width: 8px;
-    height: 8px;
+    width: var(--space-2);
+    height: var(--space-2);
     border-radius: 50%;
     background: var(--text-dim);
-    box-shadow: 0 0 4px currentColor;
+    box-shadow: 0 0 var(--space-1) currentColor;
 }
 
 .cat-vis-status.connected { color: var(--accent-green); }
@@ -94,7 +119,7 @@
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .cat-vis-toolbar label {
@@ -103,7 +128,7 @@
     text-transform: uppercase;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-1);
 }
 
 .cat-vis-terminal {
@@ -114,21 +139,21 @@
     min-height: 160px;
     max-height: 80vh;
     margin: 0;
-    padding: 8px 10px;
-    background: #13251e;
-    border: 1px solid var(--border-dim);
-    border-radius: 3px;
-    color: var(--accent-green, #1fec9b);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--accent-green);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--text-xs);
     line-height: 1.35;
     white-space: pre-wrap;
     overflow: auto;
     resize: vertical;
 }
 
-.cat-vis-terminal .tx { color: var(--accent-cyan); }
-.cat-vis-terminal .rx { color: var(--accent-green, #6ee7b7); }
+.cat-vis-terminal .tx  { color: var(--accent-orange); }
+.cat-vis-terminal .rx  { color: var(--accent-green); }
 .cat-vis-terminal .sys { color: var(--text-dim); font-style: italic; }
 .cat-vis-terminal .err { color: var(--accent-red); }
 
@@ -136,10 +161,10 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
     background: var(--bg-card);
-    border: 1px solid var(--border-dim);
-    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
 }
 
 .cat-vis-prompt {
@@ -152,9 +177,9 @@
     flex: 1;
     background: transparent;
     border: none;
-    color: var(--accent-green, #6ee7b7);
+    color: var(--accent-green);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--text-xs);
     outline: none;
 }
 
@@ -165,10 +190,9 @@
 }
 
 .cat-vis-livestate {
-    padding: 0px 0px;
     background: var(--bg-card);
-    border: 1px solid var(--border-dim);
-    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
 }
 
 .cat-vis-livestate-head {
@@ -176,48 +200,47 @@
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-1);
 }
 
 .cat-vis-livestate pre {
-    /*! margin: 0px; */
     color: var(--accent-cyan);
     font-family: var(--font-mono);
     font-size: 11px;
     white-space: pre-wrap;
     max-height: 140px;
     overflow: auto;
-    background: #13251e;
-    padding: 8px 10px;
+    background: var(--bg-elevated);
+    padding: var(--space-2) var(--space-3);
 }
 
 /* --- Connection panel (collapsible, mobile-friendly) --------------------- */
 .cat-vis-connect {
     background: var(--bg-card);
-    border: 1px solid rgba(46, 125, 138, 0.23);
-    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
     padding: 0;
 }
 
 .cat-vis-connect > summary {
     list-style: none;
     cursor: pointer;
-    padding: 8px 10px;
+    padding: var(--space-2) var(--space-3);
     display: flex;
     align-items: baseline;
-    gap: 12px;
+    gap: var(--space-3);
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--accent-cyan);
     user-select: none;
-    background: linear-gradient(-1deg, rgba(10, 12, 13, 0.5)90%, rgba(42, 177, 230, 0.69) 100%);
+    background: var(--bg-card);
 }
 
 .cat-vis-connect > summary::-webkit-details-marker { display: none; }
 .cat-vis-connect > summary::before {
     content: '▸';
     color: var(--text-dim);
-    transition: transform 0.15s;
+    transition: transform var(--transition-fast);
 }
 .cat-vis-connect[open] > summary::before { transform: rotate(90deg); }
 
@@ -234,18 +257,18 @@
 }
 
 .cat-vis-connect-body {
-    padding: 8px 10px 12px;
+    padding: var(--space-2) var(--space-3) var(--space-3);
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    border-top: 1px solid var(--border-dim);
+    gap: var(--space-2);
+    border-top: 1px solid var(--border-color);
     max-width: 960px;
 }
 
 .cat-vis-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-2);
     align-items: flex-end;
 }
 
@@ -276,24 +299,15 @@
     align-self: flex-end;
 }
 
-.cat-vis-btn-connect {
-    color: var(--accent-green);
-    margin-left: auto;
-}
-
-.cat-vis-btn-disconnect {
-    color: var(--accent-red);
-}
-
 .cat-vis-field select,
 .cat-vis-field input {
-    background: #050a08;
-    border: 1px solid var(--border-dim);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
     color: var(--accent-cyan);
-    padding: 4px 6px;
+    padding: var(--space-1) 6px;
     font-family: var(--font-mono);
-    font-size: 12px;
-    border-radius: 2px;
+    font-size: var(--text-xs);
+    border-radius: var(--radius-sm);
 }
 
 .cat-vis-checkbox {
@@ -302,7 +316,7 @@
     text-transform: uppercase;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-1);
 }
 
 .cat-vis-rignotes {
@@ -332,9 +346,7 @@
         min-width: 0;
     }
 
-    .cat-vis-rescan,
-    .cat-vis-btn-connect,
-    .cat-vis-btn-disconnect {
+    .cat-vis-rescan {
         align-self: stretch;
         margin-left: 0;
     }
@@ -377,28 +389,24 @@
 /*  intercept's CSS tokens — no inline styles, no hard-coded colors.        */
 /* ------------------------------------------------------------------------ */
 .cat-vis-macros {
-    border: 1px solid var: (--accent-green);
-    border-radius: 4px;
-    background: var(--bg-card, #0e1a1f);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
     padding: 0;
     margin: 0;
-    background: linear-gradient(-1deg, rgba(10, 12, 13, 0.5) 97%, rgba(42, 177, 230, 0.69) 100%);
-    border: 1px solid rgba(46, 125, 138, 0.17);
 }
 
-.cat-vis-macros[open] > summary {/*! border-bottom: 1px solid rgba(46, 125, 138, 0.63); */}
-
 .cat-vis-macro-body {
-    padding: 10px 12px;
+    padding: var(--space-3);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-3);
 }
 
 .cat-vis-macro-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px;
+    gap: var(--space-4);
 }
 
 .cat-vis-macro-col {
@@ -416,24 +424,24 @@
 
 .cat-vis-input-text {
     flex: 1 1 auto;
-    background: var(--bg-input, #0b1014);
-    color: var(--text, #d6e4ee);
-    border: 1px solid var(--border-dim);
-    padding: 4px 8px;
-    border-radius: 3px;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
     font: inherit;
-    font-size: 12px;
+    font-size: var(--text-xs);
     min-width: 0;
 }
 
 .cat-vis-macro-list {
     height: 220px;
     overflow: auto;
-    border: 1px solid var(--border-dim);
-    background: var(--bg-input, #0b1014);
-    padding: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-elevated);
+    padding: var(--space-1);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--text-xs);
     line-height: 1.4;
 }
 
@@ -449,9 +457,9 @@
 }
 
 .cat-vis-cmd-row {
-    padding: 3px 4px;
+    padding: 3px var(--space-1);
     cursor: pointer;
-    border-bottom: 1px dotted var(--border-dim);
+    border-bottom: 1px dotted var(--border-color);
     display: flex;
     gap: 6px;
     align-items: baseline;
@@ -459,11 +467,11 @@
 }
 
 .cat-vis-cmd-row:hover {
-    background: rgba(0, 212, 255, 0.08);
+    background: var(--accent-cyan-dim);
 }
 
 .cat-vis-cmd-cat {
-    color: var(--accent, #f0a020);
+    color: var(--accent-amber);
     font-size: 10px;
     text-transform: uppercase;
     flex: 0 0 auto;
@@ -471,7 +479,7 @@
 }
 
 .cat-vis-cmd-name {
-    color: var(--text, #d6e4ee);
+    color: var(--text-primary);
     font-weight: 600;
     flex: 1 1 auto;
     overflow: hidden;
@@ -480,7 +488,7 @@
 }
 
 .cat-vis-cmd-template {
-    color: var(--text-dim, #7e95a6);
+    color: var(--text-dim);
     font-size: 11px;
     flex: 0 0 auto;
 }
@@ -489,36 +497,36 @@
     display: flex;
     gap: 6px;
     align-items: center;
-    padding: 4px 4px;
-    border-bottom: 1px dotted var(--border-dim);
+    padding: var(--space-1);
+    border-bottom: 1px dotted var(--border-color);
 }
 
 .cat-vis-macro-row-name {
     flex: 1 1 auto;
-    color: var(--text, #d6e4ee);
+    color: var(--text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .cat-vis-macro-btn {
-    padding: 2px 8px;
+    padding: 2px var(--space-2);
     cursor: pointer;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     font-size: 11px;
-    background: var(--bg-input, #0b1014);
-    border: 1px solid var(--border-dim);
-    color: var(--text, #d6e4ee);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
 }
 
 .cat-vis-macro-btn--run {
-    color: var(--accent-green, #1fec9b);
-    border-color: var(--accent-green, #1fec9b);
+    color: var(--accent-green);
+    border-color: var(--accent-green);
 }
 
 .cat-vis-macro-btn--del {
-    color: var(--accent-red, #ff7070);
-    border-color: var(--accent-red, #ff7070);
+    color: var(--accent-red);
+    border-color: var(--accent-red);
 }
 
 .cat-vis-step-row {
@@ -526,19 +534,19 @@
     gap: 6px;
     align-items: center;
     padding: 3px 0;
-    border-bottom: 1px dotted var(--border-dim);
+    border-bottom: 1px dotted var(--border-color);
     flex-wrap: wrap;
 }
 
 .cat-vis-step-idx {
-    color: var(--text-dim, #7e95a6);
+    color: var(--text-dim);
     width: 22px;
     flex: 0 0 auto;
 }
 
 .cat-vis-step-name {
     flex: 1 1 100px;
-    color: var(--text, #d6e4ee);
+    color: var(--text-primary);
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -546,17 +554,17 @@
 }
 
 .cat-vis-step-tpl {
-    color: var(--text-dim, #6a7a87);
+    color: var(--text-dim);
     font-size: 11px;
     flex: 0 0 auto;
 }
 
 .cat-vis-step-param,
 .cat-vis-step-delay {
-    background: var(--bg-card, #111820);
-    color: var(--text, #d6e4ee);
-    border: 1px solid var(--border-dim);
-    padding: 1px 4px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 1px var(--space-1);
     font: inherit;
     font-size: 11px;
 }
@@ -565,9 +573,9 @@
 .cat-vis-step-delay  { width: 64px; }
 
 .cat-vis-macro-empty {
-    color: var(--text-dim, #7e95a6);
-    padding: 8px;
-    font-size: 12px;
+    color: var(--text-dim);
+    padding: var(--space-2);
+    font-size: var(--text-xs);
 }
 
 @media (max-width: 720px) {
