@@ -11,11 +11,12 @@ Serial-port control of amateur radio transceivers. Lives under the **Signals** g
 ### Reference driver — Kenwood TS-850S
 Full implementation in `utils/cat/kenwood_ts850.py`:
 
+- **ID handshake on connect** — sends `ID;` immediately after the port settles. `ID008` = TS-850 confirmed; anything else (or no reply) is surfaced as a `sys` line in the CAT terminal so the operator finds out at once if the baud/parity/cable is wrong or the wrong Kenwood is wired up.
 - Auto-Info (`AI1;`) live frame streaming
 - Periodic poll: `IF;` + `SM;` every 0.5 s (or `SM;` every 1.5 s when AI is on) — **togglable** at runtime via `/cat/polling`
-- Frame parsers: `IF`, `FA`, `FB`, `MD`, `SM`, `FR`, `FT`, `RT`, `XT`, `GT`, `FL`, `MC`, `NB`, `RA`, `AG`, `RG`, `SQ`, `KS`, `PC`
-- Modes: `LSB`, `USB`, `CW`, `CW-R`, `AM`, `FM`, `FSK`, `FSK-R`
-- Default serial framing: **4800 8N2**, RTS/DTR de-asserted (TS-850 quirk). All five parameters (baud, data bits, stop bits, parity, RTS/DTR) are per-rig defaults sourced from the registry and can be overridden per connection.
+- Frame parsers: `IF`, `FA`, `FB`, `MD`, `SM`, `FR`, `FT`, `RT`, `XT`, `FL`, `MC`. Polling and parsing are deliberately limited to commands the TS-850 actually documents — `AGC/AF/RF/SQ/NB/RA/KS/PC` arrived on later Kenwoods (TS-590S, TS-2000) and the 1991-era TS-850 silently rejects them with `?`.
+- Modes: `LSB`, `USB`, `CW`, `CW-R`, `AM`, `FM`, `FSK`, `FSK-R` (mode code `8` / `TUNE` is decoded for status only — `set_mode('TUNE')` is intentionally blocked, since `MD8;` keys a steady carrier into the ATU)
+- Default serial framing: **4800 8N2** (1 start, 8 data, 2 stop, no parity, per Kenwood TS-850S manual), RTS/DTR de-asserted (TS-850 quirk). All five parameters (baud, data bits, stop bits, parity, RTS/DTR) are per-rig defaults sourced from the registry and can be overridden per connection.
 
 ### Vendor catalog (stubs only, no driver code yet)
 `utils/cat/registry.py` lists these so the UI can advertise upcoming support. Selecting one returns HTTP 400 `driver_unavailable` until a real driver lands. Each descriptor carries its own serial-framing defaults (`default_baud`, `data_bits`, `stop_bits`, `parity`) so the UI can preset the right values per rig.
@@ -83,6 +84,8 @@ Enforced in `routes/cat.py` *before* any command reaches the rig. Persisted via 
 | `/cat/step`       | `{ "hz": int }` | — |
 | `/cat/supervisor` | partial settings dict | — |
 
+> Endpoints whose underlying CAT command isn't documented by the connected rig return **HTTP 400 `unsupported`** without touching the wire. On the TS-850 that applies to `/cat/agc`, `/cat/nb`, `/cat/attenuator`, `/cat/af_gain`, `/cat/rf_gain`, `/cat/squelch`, `/cat/keyer`, and `/cat/power` — use macros built from the catalog instead (e.g. AIP, Lock, CW Pitch) for things the rig *does* support but doesn't have a dedicated REST verb.
+
 ### Live stream
 `GET /cat/stream` — Server-Sent Events. Multi-tab safe via `sse_stream_fanout`.
 
@@ -99,7 +102,7 @@ The UI is split between a thin sidebar (rig controls that don't need real estate
 - **Supervisor** — TX-lock, band-guard, power-cap controls.
 
 ### Main view — `#catVisuals` in `templates/index.html`
-- **Connection panel** (collapsible `<details>`) — transceiver, serial port, baud, data / parity / stop, RTS/DTR, Connect / Disconnect. Auto-collapses on successful connect and re-opens on disconnect. Framing fields auto-fill from the selected rig descriptor (TS-850 → `8N2`, modern rigs → `8N1`).
+- **Connection panel** (collapsible `<details>`) — transceiver, serial port, baud, data / parity / stop, RTS/DTR, Connect / Disconnect. Auto-collapses on successful connect and re-opens on disconnect. Framing fields auto-fill from the selected rig descriptor (TS-850 → `8N2`, FTX-1 → `8N1`).
 - **Toolbar** — RIG name badge, connection-state dot, `autoscroll` checkbox, `poll` checkbox (toggles `/cat/polling` at runtime), `clear`, **Probe** (runs `/cat/probe` diagnostic and echoes results to the terminal), `Poll IF;` (one-shot refresh).
 - **CAT terminal** — colour-coded log of every TX / RX frame, system messages, and probe verdicts. Capped at ~500 lines.
 - **Raw input** — type a command and press Enter or click **Send**. Trailing `;` is added automatically. While TX-lock is on, only `TX` / `KY` / `KS` commands are refused; queries and mode/VFO/AI commands work freely.
@@ -147,7 +150,7 @@ The CAT mode talks to a transceiver over a USB↔Serial adapter (FTDI / Prolific
 6. In the main view, open the **Connection** drawer (top of `#catVisuals`):
    - **Rig**: `Kenwood TS-850S` — picking the rig auto-fills the framing fields below.
    - **Port**: should list `/dev/ttyUSB0` (hit *Rescan* if not)
-   - **Baud / Data / Parity / Stop**: `4800 / 8 / N / 2` (preset from the TS-850 descriptor; override if your interface differs)
+   - **Baud / Data / Parity / Stop**: `4800 / 8 / N / 2` (preset from the TS-850 descriptor — per Kenwood manual: 1 start, 8 data, 2 stop, no parity)
    - **RTS / DTR**: both **off** (TS-850 quirk)
    - Click **Connect**. The drawer collapses, the RIG badge lights up, and the CAT terminal starts logging frames.
 7. If nothing comes back, click **Probe** before fiddling with cables. It runs `/cat/probe` against the same port/framing with the driver detached, sends `ID; IF; FA;`, and prints ASCII + hex + a verdict so you can tell "no bytes at all" from "wrong baud / framing".
@@ -169,6 +172,32 @@ usbipd attach --wsl --busid <BUSID>      # each session
 ```
 
 Then in WSL the adapter appears as `/dev/ttyUSB0`. Proceed with step 2 above.
+
+#### 4.2.1 Connection drops under Docker Desktop
+
+Native WSL2 talks to `/dev/ttyUSB0` over a stable kernel driver. Docker Desktop adds a second layer (`usbipd-win` → WSL2 distro → Docker VM bind-mount), and any of these links can blip:
+
+- After **suspend / resume** of the host, usbipd-win silently detaches.
+- After **unplugging and re-plugging** the adapter, the BUSID is the same but the device node inside the container points at a now-dead handle until the container is recreated.
+- A noisy USB hub or a short PSU brown-out can drop the device for a fraction of a second; pyserial then keeps raising `OSError` on every subsequent read.
+
+Symptoms in the CAT terminal: TX frames stop echoing, no RX, the LIVE STATE box freezes on the last known values.
+
+The driver now detects this: after `SERIAL_FAIL_LIMIT` (10) consecutive read/write errors it closes the port, flips the rig to **Disconnected**, and pushes a `sys` line into the terminal like:
+
+```
+[hh:mm:ss] · serial link lost (…) — disconnect and reconnect the rig from the Connection panel
+```
+
+When that happens, the recipe is:
+
+```powershell
+usbipd detach --busid <BUSID>
+usbipd attach --wsl --busid <BUSID>
+docker compose --profile basic up -d --force-recreate intercept
+```
+
+If you only see the issue intermittently and not after a re-attach, the simplest workaround is to bypass Docker Desktop and run intercept directly in the WSL2 distro (`pip install -r requirements.txt && python app.py`) — the serial path is much shorter and considerably more stable.
 
 ### 4.3 Without hardware (sanity check only)
 
@@ -209,6 +238,7 @@ Tests run on Linux / WSL. On native Windows pytest's conftest fails earlier on a
 | `utils/cat/supervisor.py` | `Supervisor` dataclass, `load_supervisor` / `save_supervisor` |
 | `utils/cat/registry.py` | `RigDescriptor`, capability constants, `RIG_REGISTRY`, lookups |
 | `utils/cat/kenwood_ts850.py` | TS-850S driver implementation |
+| `utils/cat/yaesu_ftx1.py`    | Yaesu FTX-1 driver implementation |
 | `routes/cat.py` | Blueprint `cat_bp`, REST + SSE endpoints |
 | `templates/partials/modes/cat.html` | UI partial |
 | `static/js/modes/cat.js` | `CATMode` IIFE controller |
@@ -229,7 +259,7 @@ Integration touchpoints:
 
 - Panadapter / waterfall surface bound to VFO A
 - Front-panel virtual-rig view
-- Real driver code for the 10 stub vendor entries (Kenwood TS-590S/TS-2000, Yaesu FT-991A/FT-DX10/FTX-1, Icom IC-7300/IC-7610/IC-705, Xiegu G90/X6100)
+- Real driver code for the remaining stub vendor entries (Kenwood TS-590S/TS-2000, Yaesu FT-991A/FT-DX10, Icom IC-7300/IC-7610/IC-705, Xiegu G90/X6100)
 - Memory-channel browser UI
 - Per-rig user presets (default band/mode pairs)
 
@@ -252,14 +282,29 @@ touching the main settings file).
 
 **Built-ins** (`utils/cat/seed_commands.py`):
 
-- `kenwood_ts850` — 44 commands across `vfo`, `mode`, `split`, `rit`,
-  `gain`, `aux`.
-- `yaesu_ftx1` — ~30 commands (catalog only, no live driver yet — see
-  the [FTX-1 reference](cat/FTX1_REFERENCE.md)).
+- `kenwood_ts850` — ~46 commands across `frequency`, `mode`, `split`,
+  `rit`, `ptt`, `dsp`, `memory`, `misc`, `status`. Scope is the
+  TS-850 *Operating Manual* command set only (AI, DN/UP, FA/FB, FL,
+  FR/FT, ID, IF, LK, MC, MD, MR, MW, MX, PT, RC, RD/RU, RM, RT,
+  RX/TX, SC, SH/SL, SM, TN, VR, XT). Commands inherited from later
+  Kenwoods (AGC/AF/RF/SQ/NB/RA/KS/PC) are deliberately *not* in this
+  list — the rig rejects them with `?`.
+- `yaesu_ftx1` — ~31 commands. Live serial driver in
+  `utils/cat/yaesu_ftx1.py` (Yaesu CAT v2, 38400 8N1). Covers VFO A/B,
+  mode (`MD0Mx`), split (`STx`), RIT, PTT (`TX0`/`TX1`), power, AGC,
+  NB, S-meter (`SM0;`) and IF status. Channel-1 (Sub) commands are
+  not yet wired — see the [FTX-1 reference](cat/FTX1_REFERENCE.md).
 
-Seeds run once at startup from `app.py::_init_app()` via
-`utils.cat.init_command_catalog()`; re-running is a no-op
-(`has_seed(rig_id)` guard).
+Seeds run at startup from `app.py::_init_app()` via
+`utils.cat.init_command_catalog()`. On every start the loader calls
+`macros_db.reseed_builtins(rig_id, cmds)` which deletes only rows
+flagged `is_builtin = 1` and reinserts the current list. **User-added
+commands (`is_builtin = 0`) and saved macros are preserved**; macro
+steps that referenced a deleted built-in keep their `raw_command`
+(already wire-ready) via the schema's `ON DELETE SET NULL` on
+`interc_cat_macro_steps.command_id`. This means corrections to the
+seed list (e.g. dropping commands the rig never supported) propagate
+automatically to existing `cat.db` files without manual DB surgery.
 
 **REST endpoints** (added to `routes/cat.py`):
 

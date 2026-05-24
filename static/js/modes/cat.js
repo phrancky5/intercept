@@ -130,7 +130,24 @@ const CATMode = (function() {
     }
 
     function appendIo(direction, payload) {
-        termAppend(direction === 'tx' ? 'tx' : 'rx', payload);
+        if (direction === 'tx') {
+            termAppend('tx', payload);
+            return;
+        }        if (direction === 'sys' || direction === 'err') {
+            termAppend(direction === 'err' ? 'err' : 'sys', payload);
+            return;
+        }        // RX: a bare '?' is the universal Kenwood/Yaesu "command rejected /
+        // not understood" reply; an empty payload means the rig timed out
+        // without responding. Surface both in red so the user sees them.
+        const trimmed = (payload || '').trim();
+        if (trimmed === '' || trimmed === '?' || trimmed === '?;') {
+            const note = trimmed === ''
+                ? 'no response from rig (timeout)'
+                : 'rig rejected command ("?")';
+            termAppend('err', `${payload}    — ${note}`);
+            return;
+        }
+        termAppend('rx', payload);
     }
 
     function clearTerminal() {

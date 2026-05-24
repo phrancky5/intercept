@@ -32,14 +32,19 @@ def init_command_catalog(db_path=None) -> None:
     """Initialise the SQLite-backed CAT command catalog + macro tables.
 
     Idempotent. Creates ``instance/cat.db`` (or the provided path) and
-    seeds the built-in command catalogs from :mod:`utils.cat.seed_commands`
-    for every rig that doesn't yet have rows. Called once at app startup
-    from :func:`app._init_app`.
+    refreshes the built-in command catalogs from
+    :mod:`utils.cat.seed_commands` on every startup. User-added
+    commands (``is_builtin = 0``) and saved macros are preserved; only
+    rows flagged ``is_builtin = 1`` are replaced so corrections to the
+    seed list (e.g. dropping commands the rig never supported)
+    propagate to existing deployments. Called once at app startup from
+    :func:`app._init_app`.
     """
     from utils.cat import macros_db, seed_commands
 
     macros_db.init(db_path)
-    seed_commands.seed_all(macros_db.seed_catalog)
+    for rig_id, cmds in seed_commands.SEEDS.items():
+        macros_db.reseed_builtins(rig_id, cmds)
 
 
 def list_serial_ports() -> list[dict]:

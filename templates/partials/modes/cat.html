@@ -7,8 +7,8 @@
             (TX lock, band guard, power cap) are enforced server-side and
             <strong>default to safe</strong>: TX is blocked until you unlock it.
         </p>
-        <p class="info-text" style="font-size: 11px; color: var(--text-dim);">
-            Rig selection &amp; connection live in the main panel \u2192
+        <p class="info-text cat-hint">
+            Rig selection &amp; connection live in the main panel →
         </p>
     </div>
 
@@ -16,7 +16,7 @@
         <h3>VFO &amp; Mode</h3>
         <div class="form-group">
             <label>VFO A (Hz)</label>
-            <div style="display: flex; gap: 4px;">
+            <div class="cat-inline-row">
                 <input type="number" id="catVfoAHz" value="14060000" min="0" step="1">
                 <button class="preset-btn" type="button" onclick="CATMode.setVfo('A')">Set</button>
                 <button class="preset-btn" type="button" onclick="CATMode.selectVfo('A')">RX A</button>
@@ -24,7 +24,7 @@
         </div>
         <div class="form-group">
             <label>VFO B (Hz)</label>
-            <div style="display: flex; gap: 4px;">
+            <div class="cat-inline-row">
                 <input type="number" id="catVfoBHz" value="14070000" min="0" step="1">
                 <button class="preset-btn" type="button" onclick="CATMode.setVfo('B')">Set</button>
                 <button class="preset-btn" type="button" onclick="CATMode.selectVfo('B')">RX B</button>
@@ -55,7 +55,7 @@
             <label>Max TX power (W) — 0 disables cap</label>
             <input type="number" id="catSupMaxPower" value="0" min="0" max="1500" step="1" onchange="CATMode.updateSupervisor()">
         </div>
-        <p class="info-text" style="font-size: 10px; color: var(--text-dim);">
+        <p class="info-text cat-hint cat-hint--xs">
             With TX locked, <code>/cat/ptt</code> and raw passthrough are refused server-side.
         </p>
     </div>

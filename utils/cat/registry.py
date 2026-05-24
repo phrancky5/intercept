@@ -15,6 +15,7 @@ from typing import Type
 
 from utils.cat.base import RigDriver
 from utils.cat.kenwood_ts850 import KenwoodTS850Driver
+from utils.cat.yaesu_ftx1 import YaesuFTX1Driver
 
 
 @dataclass(frozen=True)
@@ -80,11 +81,19 @@ CAP_STEP = 'step'
 CAP_MEMORY = 'memory'
 CAP_RAW = 'raw'
 
+# TS-850 capability set is deliberately narrow: only commands that the
+# 1991-era firmware actually implements per the External Control manual.
+# AGC/NB/ATT/AF/RF/SQUELCH/KEYER/POWER are CAT-controllable on later
+# Kenwoods (TS-590S, TS-2000) but were never wired up on the TS-850 —
+# exposing them here just gave the user "?" replies on every connect.
 TS850_CAPS = frozenset({
     CAP_VFO, CAP_MODE, CAP_SPLIT, CAP_RIT, CAP_PTT,
-    CAP_AGC, CAP_FILTER, CAP_NB, CAP_ATT,
-    CAP_AF, CAP_RF, CAP_SQUELCH, CAP_KEYER, CAP_POWER,
-    CAP_STEP, CAP_MEMORY, CAP_RAW,
+    CAP_FILTER, CAP_STEP, CAP_MEMORY, CAP_RAW,
+})
+
+FTX1_CAPS = frozenset({
+    CAP_VFO, CAP_MODE, CAP_SPLIT, CAP_RIT, CAP_PTT,
+    CAP_AGC, CAP_NB, CAP_POWER, CAP_RAW,
 })
 
 
@@ -99,7 +108,7 @@ RIG_REGISTRY: dict[str, RigDescriptor] = {
         supported_bauds=(1200, 2400, 4800, 9600),
         driver_class=KenwoodTS850Driver,
         capabilities=TS850_CAPS,
-        notes='ASCII CAT, 8N2. Reference implementation.',
+        notes='ASCII CAT, 4800 8N2 (1 start, 8 data, 2 stop, no parity) per Kenwood TS-850S manual.',
         data_bits=8,
         stop_bits=2,
         parity='N',
@@ -157,9 +166,12 @@ RIG_REGISTRY: dict[str, RigDescriptor] = {
         display_name='Yaesu FTX-1',
         default_baud=38400,
         supported_bauds=(4800, 9600, 19200, 38400, 115200),
-        driver_class=None,
-        capabilities=frozenset(),
-        notes='Yaesu FTX-1 (Field / Optima). ASCII CAT, command set lives in the upcoming rig-command database. Driver pending.',
+        driver_class=YaesuFTX1Driver,
+        capabilities=FTX1_CAPS,
+        notes='Yaesu FTX-1 (Field / Optima). Yaesu CAT v2, 38400 8N1.',
+        data_bits=8,
+        stop_bits=1,
+        parity='N',
     ),
 
     # --- Icom -----------------------------------------------------------
