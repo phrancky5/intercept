@@ -222,7 +222,8 @@
     padding: 0;
 }
 
-.cat-vis-connect > summary {
+.cat-vis-connect > summary,
+.cat-vis-macros > summary {
     list-style: none;
     cursor: pointer;
     padding: var(--space-2) var(--space-3);
@@ -236,18 +237,22 @@
     background: var(--bg-card);
 }
 
-.cat-vis-connect > summary::-webkit-details-marker { display: none; }
-.cat-vis-connect > summary::before {
+.cat-vis-connect > summary::-webkit-details-marker,
+.cat-vis-macros > summary::-webkit-details-marker { display: none; }
+.cat-vis-connect > summary::before,
+.cat-vis-macros > summary::before {
     content: '▸';
     color: var(--text-dim);
     transition: transform var(--transition-fast);
 }
-.cat-vis-connect[open] > summary::before { transform: rotate(90deg); }
+.cat-vis-connect[open] > summary::before,
+.cat-vis-macros[open] > summary::before { transform: rotate(90deg); }
 
 .cat-vis-connect-title {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-weight: bold;
+    color: var(--accent-orange);
 }
 
 .cat-vis-connect-summary {
@@ -459,7 +464,7 @@
 .cat-vis-cmd-row {
     padding: 3px var(--space-1);
     cursor: pointer;
-    border-bottom: 1px dotted var(--border-color);
+    border-bottom: 1px dotted var(--border-focus);
     display: flex;
     gap: 6px;
     align-items: baseline;
@@ -498,7 +503,9 @@
     gap: 6px;
     align-items: center;
     padding: var(--space-1);
+    /*! /*! border-bottom: 1px dotted var(--border-focus); */ */
     border-bottom: 1px dotted var(--border-color);
+    border-bottom: 1px dotted var(--border-focus);
 }
 
 .cat-vis-macro-row-name {
