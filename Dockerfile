@@ -159,9 +159,14 @@ RUN mkdir -p /staging/usr/local/share /staging/usr/local/lib/satdump/plugins \
     # Core shared library
     && (cp -a /usr/local/lib/libsatdump* /staging/usr/local/lib/ 2>/dev/null \
         || cp -a /usr/lib/libsatdump* /staging/usr/local/lib/) \
-    # Plugins
-    && (cp -a /usr/local/lib/satdump/plugins/*.so /staging/usr/local/lib/satdump/plugins/ 2>/dev/null \
-        || cp -a /usr/lib/satdump/plugins/*.so /staging/usr/local/lib/satdump/plugins/ 2>/dev/null \
+    # Plugins — use -L to DEREFERENCE symlinks so the real .so files are
+    # staged. The plugin-resolution step above may leave symlinks in
+    # /usr/local/lib/satdump/plugins pointing at /usr/lib/satdump/plugins;
+    # the runtime stage later symlinks /usr/lib/satdump -> /usr/local/lib/satdump,
+    # which would turn preserved symlinks into self-referential loops
+    # ("Too many levels of symbolic links") and crash SatDump on plugin load.
+    && (cp -aL /usr/local/lib/satdump/plugins/*.so /staging/usr/local/lib/satdump/plugins/ 2>/dev/null \
+        || cp -aL /usr/lib/satdump/plugins/*.so /staging/usr/local/lib/satdump/plugins/ 2>/dev/null \
         || true) \
     # Pipeline definitions and resources
     && (cp -a /usr/local/share/satdump /staging/usr/local/share/ 2>/dev/null \
@@ -169,7 +174,11 @@ RUN mkdir -p /staging/usr/local/share /staging/usr/local/lib/satdump/plugins \
     # Verify
     && test -x /staging/usr/local/bin/satdump \
     && ls /staging/usr/local/share/satdump/pipelines/*.json >/dev/null 2>&1 \
-    && echo "SatDump staging OK: $(ls /staging/usr/local/share/satdump/pipelines/*.json | wc -l) pipeline files"
+    # Guard: plugins must be staged as REAL files, not symlinks. find -type f
+    # only counts regular files, so a symlink-only staging fails the build here.
+    && STAGED_PLUGINS=$(find /staging/usr/local/lib/satdump/plugins -name '*.so' -type f | wc -l) \
+    && test "$STAGED_PLUGINS" -gt 0 \
+    && echo "SatDump staging OK: $(ls /staging/usr/local/share/satdump/pipelines/*.json | wc -l) pipeline files, $STAGED_PLUGINS plugins"
 
 # Build hackrf CLI tools from source — avoids libhackrf0 version conflict
 # between the 'hackrf' apt package and soapysdr-module-hackrf's newer libhackrf0
