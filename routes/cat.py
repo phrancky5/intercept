@@ -162,7 +162,40 @@ def cat_rigs():
 
 @cat_bp.route('/cat/ports', methods=['GET'])
 def cat_ports():
-    return jsonify({'ports': list_serial_ports()})
+    # When a host-side bridge is configured, the real serial ports live on
+    # the bridge host — ask it instead of scanning the container.
+    from utils.cat import bridge_client
+    if bridge_client.bridge_enabled():
+        try:
+            data = bridge_client.fetch_ports()
+            ports = data.get('ports', [])
+            result = {'ports': ports, 'source': 'bridge'}
+            if not ports:
+                result['hint'] = (
+                    'No serial ports reported by the CAT bridge. Check the '
+                    'cable on the bridge host and that the radio is powered.'
+                )
+            return jsonify(result)
+        except Exception as exc:
+            logger.warning('bridge /ports failed: %s', exc)
+            return jsonify({
+                'ports': [],
+                'source': 'bridge',
+                'hint': (
+                    'CAT bridge unreachable at CAT_BRIDGE_URL. Is cat_bridge.py '
+                    'running on the host and reachable from the container?'
+                ),
+            })
+
+    ports = list_serial_ports()
+    result = {'ports': ports}
+    if not ports:
+        result['hint'] = (
+            'No serial ports detected. If using Docker with usbipd-win, '
+            'ensure the device is attached BEFORE starting the container, '
+            'then recreate: docker compose up -d --force-recreate'
+        )
+    return jsonify(result)
 
 
 @cat_bp.route('/cat/select', methods=['POST'])
@@ -233,18 +266,36 @@ def cat_connect():
             time.sleep(_RECONNECT_SETTLE_S - elapsed)
 
         try:
-            driver = desc.driver_class(  # type: ignore[misc]
-                port=port,
-                baud=baud,
-                on_status=_on_status,
-                on_io=_on_io,
-                assert_rts=assert_rts,
-                assert_dtr=assert_dtr,
-                data_bits=data_bits,
-                stop_bits=stop_bits,
-                parity=parity,
-            )
-            driver.start()
+            # Optional host-side bridge: when CAT_BRIDGE_URL is set the
+            # serial port lives on another machine/process (see
+            # cat_bridge.py). We drive it through a proxy that mimics the
+            # RigDriver surface, so the rest of this module is unchanged.
+            from utils.cat import bridge_client
+            if bridge_client.bridge_enabled():
+                driver = bridge_client.RemoteDriverProxy(
+                    bridge_client.bridge_url(),
+                    bridge_client.bridge_token(),
+                    {
+                        'rig_id': rig_id, 'port': port, 'baud': baud,
+                        'data_bits': data_bits, 'stop_bits': stop_bits,
+                        'parity': parity, 'assert_rts': assert_rts,
+                        'assert_dtr': assert_dtr,
+                    },
+                    on_event=_publish,
+                )
+            else:
+                driver = desc.driver_class(  # type: ignore[misc]
+                    port=port,
+                    baud=baud,
+                    on_status=_on_status,
+                    on_io=_on_io,
+                    assert_rts=assert_rts,
+                    assert_dtr=assert_dtr,
+                    data_bits=data_bits,
+                    stop_bits=stop_bits,
+                    parity=parity,
+                )
+                driver.start()
         except Exception as exc:
             logger.warning('CAT connect failed: %s', exc)
             _last_reconnect_ts = time.time()
@@ -285,20 +336,48 @@ def cat_disconnect():
 
 @cat_bp.route('/cat/status', methods=['GET'])
 def cat_status():
+    from utils.cat import bridge_client
+    
+    # Build bridge info
+    bridge_info = {
+        'enabled': bridge_client.bridge_enabled(),
+        'url': bridge_client.bridge_url() if bridge_client.bridge_enabled() else None,
+        'reachable': False,
+    }
+    
+    # Check if bridge is reachable
+    if bridge_info['enabled']:
+        try:
+            import requests
+            resp = requests.get(
+                f"{bridge_info['url']}/health",
+                timeout=2
+            )
+            bridge_info['reachable'] = resp.status_code == 200
+        except Exception:
+            bridge_info['reachable'] = False
+    
     driver = _driver()
     if driver is None:
         return jsonify({
             'connected': False,
             'rig_id': _selected_rig_id,
             'supervisor': _supervisor_snapshot(),
+            'bridge': bridge_info,
         })
     state = driver.state()
+    
+    # Check if this is a remote proxy driver
+    is_bridge_driver = hasattr(driver, '_base')  # RemoteDriverProxy has _base
+    
     return jsonify({
         'connected': bool(state.connected),
         'rig_id': state.rig_id or _selected_rig_id,
         'state': state.to_dict(),
         'supervisor': _supervisor_snapshot(),
         'polling_enabled': bool(getattr(driver, 'polling_enabled', True)),
+        'bridge': bridge_info,
+        'via_bridge': is_bridge_driver,
     })
 
 
@@ -524,6 +603,14 @@ def cat_probe():
     for low-baud rigs (TS-850 default 4800) — uses inter-command delays
     and a per-query receive window.
     """
+    from utils.cat import bridge_client
+    if bridge_client.bridge_enabled():
+        return api_error(
+            'probe is unavailable in bridge mode — the serial port lives on '
+            'the bridge host. Connect normally; the bridge owns the port.',
+            400,
+            'bridge_mode',
+        )
     if _driver() is not None:
         return api_error(
             'disconnect first — probe needs exclusive port access',

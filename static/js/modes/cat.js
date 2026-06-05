@@ -108,10 +108,16 @@ const CATMode = (function() {
             const tail = port
                 ? `${port}${baud ? ' @ ' + baud : ''}`
                 : (baud ? `@ ${baud}` : '');
+            // Add bridge indicator
+            let bridgeTag = '';
+            if (bridgeInfo && bridgeInfo.enabled) {
+                bridgeTag = bridgeInfo.reachable ? ' [via bridge]' : ' [bridge offline!]';
+            }
             sum.textContent = connected
-                ? `${rig.display_name} · connected${tail ? ' · ' + tail : ''}`
-                : `${rig.display_name} · ${tail || 'choose port'}`;
+                ? `${rig.display_name} · connected${tail ? ' · ' + tail : ''}${bridgeTag}`
+                : `${rig.display_name} · ${tail || 'choose port'}${bridgeTag}`;
         }
+        renderBridgeStatus();
     }
 
     function termAppend(kind, text) {
@@ -268,7 +274,18 @@ const CATMode = (function() {
         if (!sel) return;
         const previous = sel.value;
         sel.innerHTML = '';
-        (data.ports || []).forEach(p => {
+        const ports = data.ports || [];
+        if (ports.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '— no ports detected —';
+            opt.disabled = true;
+            sel.appendChild(opt);
+            if (data.hint) {
+                termAppend('sys', data.hint);
+            }
+        }
+        ports.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.device;
             opt.textContent = p.description ? `${p.device} — ${p.description}` : p.device;
@@ -294,6 +311,30 @@ const CATMode = (function() {
         renderSupervisor(sv);
     }
 
+    // Bridge state tracking
+    let bridgeInfo = null;
+    
+    function renderBridgeStatus() {
+        const badge = $('catBridgeBadge');
+        if (!badge) return;
+        
+        if (!bridgeInfo || !bridgeInfo.enabled) {
+            badge.style.display = 'none';
+            return;
+        }
+        
+        badge.style.display = 'inline-block';
+        if (bridgeInfo.reachable) {
+            badge.textContent = 'BRIDGE';
+            badge.className = 'cat-vis-badge cat-vis-badge--bridge-ok';
+            badge.title = `Bridge: ${bridgeInfo.url} (connected)`;
+        } else {
+            badge.textContent = 'BRIDGE OFFLINE';
+            badge.className = 'cat-vis-badge cat-vis-badge--bridge-err';
+            badge.title = `Bridge: ${bridgeInfo.url} (unreachable)`;
+        }
+    }
+
     async function refreshStatus() {
         const data = await api('/cat/status');
         if (data.supervisor) renderSupervisor(data.supervisor);
@@ -302,6 +343,11 @@ const CATMode = (function() {
         if (typeof data.polling_enabled === 'boolean') {
             const cb = $('catPollingToggle');
             if (cb) cb.checked = data.polling_enabled;
+        }
+        // Track bridge info
+        if (data.bridge) {
+            bridgeInfo = data.bridge;
+            renderBridgeStatus();
         }
     }
 

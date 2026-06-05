@@ -95,6 +95,32 @@
     letter-spacing: 0.04em;
 }
 
+/* Bridge status badge */
+.cat-vis-badge {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.cat-vis-badge--bridge-ok {
+    background: var(--accent-green);
+    color: #000;
+}
+
+.cat-vis-badge--bridge-err {
+    background: var(--accent-red);
+    color: #fff;
+    animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0.5; }
+}
+
 .cat-vis-status {
     display: flex;
     align-items: center;

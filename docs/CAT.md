@@ -399,3 +399,143 @@ between connect/disconnect operations. The stamp is now updated on
 greys out the Connect button (`Wait 1.2s`) for the duration. Defends
 against the operator double-clicking Connect/Disconnect before the COM
 port has fully released.
+
+## 12. Host serial bridge + rigctld relay (optional)
+
+Running pyserial *inside* the Docker container is fragile on Windows:
+`usbipd-win -> WSL2 distro -> Docker Desktop VM` is a three-hop path, and
+the device frequently lands in the wrong VM or loses its sysfs metadata,
+so `/cat/ports` comes up empty "sometimes." The optional **CAT bridge**
+sidesteps that entirely by owning the serial port on the host and letting
+the container talk to it over the network.
+
+This is strictly opt-in. It adds **no new dependencies** (Flask +
+pyserial are already required) and changes nothing unless you set
+`CAT_BRIDGE_URL`. With it unset, intercept uses the in-container driver
+exactly as before.
+
+### 12.1 What it provides
+
+- `cat_bridge.py` — a standalone process that owns one rig via the same
+  `utils/cat` drivers and exposes:
+  - an HTTP + SSE API (`/ports`, `/status`, `/stream`, `/connect`,
+    `/disconnect`, `/rpc`) for the container, protected by a bearer token
+    and the `ALLOWED_IPS` IP allowlist;
+  - a **rigctld-compatible TCP relay** (`utils/cat/rigctld_relay.py`,
+    default port `4532`) so WSJT-X / Fldigi / JS8Call / Gpredict can drive
+    the same radio.
+- `routes/cat.py` proxy mode — when `CAT_BRIDGE_URL` is set, `/cat/ports`
+  and connect/control/SSE transparently target the bridge through
+  `utils/cat/bridge_client.py::RemoteDriverProxy`. The Supervisor (TX
+  lock / band guard / power cap) still applies to the web UI.
+
+```mermaid
+flowchart LR
+  radio["Rig (USB-serial COMx)"]
+  bridge["cat_bridge.py (host)"]
+  wsjtx["WSJT-X / Fldigi"]
+  container["intercept (Docker)"]
+  radio --> bridge
+  bridge -->|"TCP 4532 rigctld"| wsjtx
+  bridge -->|"HTTP+SSE token"| container
+```
+
+### 12.2 Install requirement
+
+The bridge needs **Python 3 + pyserial on the host** (the machine the
+cable is plugged into). On Windows: `pip install pyserial flask requests`
+(or reuse the intercept venv). Nothing else is required.
+
+### 12.3 Run the bridge (Windows host example)
+
+```powershell
+cd path\to\intercept
+$env:CAT_BRIDGE_TOKEN = "change-me"
+$env:ALLOWED_IPS = "127.0.0.1/8,::1,172.16.0.0/12"   # allow Docker bridge net
+python cat_bridge.py
+```
+
+If `CAT_BRIDGE_TOKEN` is unset the bridge generates one, prints it, and
+writes it to `instance/cat_bridge_token` — copy it into the container.
+
+#### Bridge environment variables (set on Windows host):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CAT_BRIDGE_TOKEN` | (generated) | Shared secret — must match Docker's `CAT_BRIDGE_TOKEN` |
+| `ALLOWED_IPS` | `127.0.0.1/8,::1` | Comma-separated IPs/CIDRs allowed to connect |
+| `CAT_BRIDGE_HOST` | `0.0.0.0` | HTTP API bind address |
+| `CAT_BRIDGE_PORT` | `5060` | HTTP API port |
+| `RIGCTLD_ENABLE` | `1` | `0` to disable rigctld relay |
+| `RIGCTLD_HOST` | `0.0.0.0` | rigctld bind address |
+| `RIGCTLD_PORT` | `4532` | rigctld TCP port |
+| `BRIDGE_TX_LOCK` | `1` | `0` to allow PTT from rigctld clients |
+| `CAT_BRIDGE_DEBUG` | `0` | `1` for verbose connection logging |
+| `RIGCTLD_DEBUG` | `0` | `1` for rigctld command logging |
+
+A convenience script `catbridge.ps1` is included with sensible defaults.
+
+#### Container environment variables (set in docker-compose.yml):
+
+| Variable | Example | Description |
+|----------|---------|-------------|
+| `CAT_BRIDGE_URL` | `http://host.docker.internal:5060` | Bridge HTTP API URL |
+| `CAT_BRIDGE_TOKEN` | `change-me` | Must match the host's token |
+
+### 12.4 Point the container at the bridge
+
+In [docker-compose.yml](../docker-compose.yml), uncomment under the
+`intercept` service environment:
+
+```yaml
+environment:
+  - CAT_BRIDGE_URL=http://host.docker.internal:5060
+  - CAT_BRIDGE_TOKEN=change-me-to-match-the-bridge
+```
+
+The `extra_hosts: ["host.docker.internal:host-gateway"]` entry (already
+added) makes that hostname resolve on Linux engines too. In bridge mode
+you do **not** need the `/dev/ttyUSB0` device mapping. Recreate:
+`docker compose up -d --force-recreate`.
+
+Then in the CAT UI, pick the rig, choose the port the bridge reports
+(e.g. `COM3`), and Connect. `Probe` is disabled in bridge mode because
+the serial port is owned by the bridge host.
+
+### 12.5 Use from WSJT-X / Fldigi
+
+Set the rig to **Hamlib NET rigctl** and the network server to
+`<bridge-host-ip>:4532`. The bridge answers `dump_state` with generic
+HF + 6 m coverage. To let those apps key the rig, start the bridge with
+`BRIDGE_TX_LOCK=0` (PTT is refused by default for safety).
+
+### 12.6 Debugging and monitoring
+
+When `CAT_BRIDGE_DEBUG=1`, the bridge logs:
+- New connections (IP address, endpoint)
+- Denied connections (IP not in allowlist or bad token)
+- Rig connect/disconnect events with port and baud rate
+
+The bridge startup banner displays:
+- Host machine name and IP addresses
+- Configured allowlist
+- Detected serial ports
+- Token hint for Docker configuration
+
+The `/info` endpoint (authenticated) returns full bridge status including
+connected clients, configuration, and available ports.
+
+In the Intercept CAT UI, a **BRIDGE** badge appears next to the rig name:
+- **Green**: Bridge mode active and reachable
+- **Red (blinking)**: Bridge configured but unreachable
+
+The connection summary also shows `[via bridge]` when connected through
+the host bridge.
+
+### 12.7 WSL alternative
+
+If you prefer, run the bridge inside the WSL2 distro where `usbipd
+attach --wsl` placed the device (`/dev/ttyUSB0`); set
+`CAT_BRIDGE_HOST=0.0.0.0` and point the container at the WSL host IP.
+The Windows-native option is recommended because COM enumeration there
+needs no usbipd at all.

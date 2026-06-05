@@ -2,6 +2,20 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.27.1] - 2026-06-05
+
+### Added
+- **CAT host-side serial bridge** — New optional `cat_bridge.py` runs on the Windows host where the radio's USB-serial cable is physically connected, bypassing unreliable Docker/WSL/usbipd serial passthrough. The bridge exposes the rig over HTTP+SSE so the containerised Intercept instance can control it via `CAT_BRIDGE_URL`. Includes IP allowlisting (`ALLOWED_IPS`) and token-based authentication (`CAT_BRIDGE_TOKEN`).
+- **rigctld TCP relay** — The bridge also exposes a Hamlib-compatible rigctld server on port 4532 (configurable), allowing WSJT-X, Fldigi, JS8Call, and other amateur radio applications to share control of the same radio. PTT is blocked by default (`BRIDGE_TX_LOCK=1`) for safety.
+- **Bridge status UI** — The CAT module now displays a green "BRIDGE" badge when connected via the host bridge (red/blinking if unreachable). Connection summary shows `[via bridge]` indicator.
+- **Bridge debugging** — Set `CAT_BRIDGE_DEBUG=1` for verbose connection logging. Startup banner shows detected serial ports, allowlist, and token hint. The `/info` endpoint returns full bridge status including connected clients.
+- **catbridge.ps1** — Convenience PowerShell script to start the bridge on Windows with documented environment variables.
+
+### Changed
+- Serial port detection hardened to glob `/dev/ttyUSB*`, `/dev/ttyACM*`, and `/dev/serial/by-id/*` when `pyserial.tools.list_ports.comports()` returns empty (common in Docker without full sysfs).
+
+---
+
 ## [2.27.0] - 2026-05-20
 
 ### Fixed
