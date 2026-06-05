@@ -241,8 +241,13 @@ Tests run on Linux / WSL. On native Windows pytest's conftest fails earlier on a
 | `utils/cat/yaesu_ftx1.py`    | Yaesu FTX-1 driver implementation |
 | `routes/cat.py` | Blueprint `cat_bp`, REST + SSE endpoints |
 | `templates/partials/modes/cat.html` | UI partial |
+| `templates/partials/skins/ts850.html` | TS-850S virtual front panel skin |
 | `static/js/modes/cat.js` | `CATMode` IIFE controller |
+| `static/js/modes/cat-frontpanel.js` | `CATFrontPanel` skin controller (generic) |
+| `static/js/core/cat-smeter.js` | `CatSMeter` analog multimeter widget (SVG) |
 | `static/css/modes/cat.css` | Scoped styles |
+| `static/css/modes/cat-frontpanel.css` | Front panel base (rig-neutral) styles |
+| `static/css/skins/ts850.css` | TS-850S skin layout |
 | `tests/test_cat_registry.py` | Registry tests |
 | `tests/test_cat_driver.py` | Driver / parser tests |
 | `tests/test_cat_routes.py` | API + supervisor tests |
@@ -257,8 +262,8 @@ Integration touchpoints:
 
 ## 7. Deferred to follow-up PRs
 
-- Panadapter / waterfall surface bound to VFO A
-- Front-panel virtual-rig view
+- Panadapter / waterfall surface bound to VFO A (front-panel spectrum zone is a wired placeholder — see §13.5)
+- Additional front-panel skins (Yaesu FTX-1, Icom IC-7300, …) — the generic controller is in place (see §13)
 - Real driver code for the remaining stub vendor entries (Kenwood TS-590S/TS-2000, Yaesu FT-991A/FT-DX10, Icom IC-7300/IC-7610/IC-705, Xiegu G90/X6100)
 - Memory-channel browser UI
 - Per-rig user presets (default band/mode pairs)
@@ -539,3 +544,91 @@ attach --wsl` placed the device (`/dev/ttyUSB0`); set
 `CAT_BRIDGE_HOST=0.0.0.0` and point the container at the WSL host IP.
 The Windows-native option is recommended because COM enumeration there
 needs no usbipd at all.
+
+---
+
+## 13. Virtual front panel
+
+An optional, skinnable hardware replica that runs as an alternate view
+inside the CAT module. The operator toggles between **Terminal** and
+**Front Panel** from the CAT header; the choice is persisted in
+`localStorage` (`cat.view`). The TS-850S ships first.
+
+### 13.1 Architecture (Skin + Controller)
+
+- **Skin** = a plain HTML partial (`templates/partials/skins/<skin>.html`)
+  plus a CSS file. It defines *appearance* only.
+- **Controller** = one shared script (`static/js/modes/cat-frontpanel.js`,
+  `window.CATFrontPanel`) that loads skins, dispatches events to the
+  existing `/cat/*` endpoints, and renders `RigState` back into the skin.
+
+The controller never references rig-specific element IDs. Instead the
+skin declares behaviour through **data-attributes**, so adding a rig is a
+content task, not a code task.
+
+**Interaction contract** (attributes on skin elements):
+
+| Attribute | Behaviour |
+|---|---|
+| `data-act="power"` | Connect / disconnect (delegates to `CATMode`) |
+| `data-act="ptt"` | Toggle PTT (`POST /cat/ptt`) |
+| `data-act="vfo-dial"` | Wheel = `POST /cat/step`; click = enter Hz → `POST /cat/vfo` |
+| `data-act="step" data-dir="up\|down"` | `POST /cat/step` |
+| `data-act="mode" data-mode-a data-mode-b` | Toggle two modes (`POST /cat/mode`) |
+| `data-act="mode-set" data-mode="CW"` | Set one mode |
+| `data-act="select-vfo" data-vfo="A\|B"` | `POST /cat/vfo {select:true}` |
+| `data-act="split-toggle"` / `"rit-toggle"` | `POST /cat/split` / `/cat/rit` |
+| `data-act="filter-cycle"` / `"nb-toggle"` | `POST /cat/filter` / `/cat/nb` |
+| `data-knob="squelch\|power\|af\|rf\|agc\|atten\|keyer"` | Wheel = adjust, click = enter value |
+
+**State rendering** (read from a `RigState` dict, no IDs hard-coded):
+
+| Attribute / class | Field |
+|---|---|
+| `[data-role="freq"]` | active VFO frequency (formatted `MHz.kHz.hHz`) |
+| `.fp-mode-chip[data-mode]` | lit when `state.mode` matches |
+| `[data-role="split"\|"rit"\|"xit"\|"memch"\|"offset"]` | indicator chips |
+| `[data-led="onair"]` | lit on `state.ptt` |
+| `[data-role="smeter-host"\|"smeter-val"\|"smeter-dbm"]` | analog meter + readout |
+| `[data-knob-val="<knob>"]` | numeric knob readouts |
+
+### 13.2 Capability awareness
+
+Controls are wired only if the rig advertises the matching capability in
+`utils/cat/registry.py`. Unsupported controls still render but get the
+`.fp-disabled` class and a tooltip. Consequently the TS-850's AF/RF/SQL/
+PWR knobs are inert (that firmware never exposed them over CAT) while
+VFO, mode, split, RIT, filter, step and PTT are live. The capability list
+comes straight from `GET /cat/rigs` (`rig.capabilities`).
+
+### 13.3 Backend route
+
+`GET /cat/frontpanel/<rig_id>` returns the skin HTML. A `rig_id → skin`
+allowlist (`_FRONTPANEL_SKINS` in `routes/cat.py`) constrains the rendered
+template so the URL can never select an arbitrary template (no path
+traversal). Unknown rigs return `404 no_skin`.
+
+### 13.4 Analog multimeter
+
+`static/js/core/cat-smeter.js` (`window.CatSMeter`) is a self-contained,
+pure-SVG widget — no bitmap assets. It draws stacked S / PO / SWR / Id /
+COMP scales sharing one needle. The controller feeds it `state.s_meter`
+on RX and `state.power_w` while transmitting.
+
+### 13.5 Spectrum placeholder
+
+The skin includes a panadapter zone (`data-act="spec-start"/"spec-stop"`,
+`[data-role="spec-status"]`) wired to a "coming soon" state. The actual
+SDR spectrum integration will be added in a later step.
+
+### 13.6 Adding a new rig skin
+
+1. Author `templates/partials/skins/<skin>.html` using the data-attribute
+   contract above (root element `class="cat-fp-stage <skin>-skin"`).
+2. Add `static/css/skins/<skin>.css` for that rig's layout/brand (the base
+   chrome lives in `static/css/modes/cat-frontpanel.css`).
+3. Register the rig in two places:
+   - `SKINS` in `static/js/modes/cat-frontpanel.js` (name + skin CSS URLs).
+   - `_FRONTPANEL_SKINS` in `routes/cat.py` (`rig_id → skin` stem).
+
+No controller JavaScript changes are required.

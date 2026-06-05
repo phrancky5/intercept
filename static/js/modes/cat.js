@@ -168,6 +168,7 @@ const CATMode = (function() {
         if (!state || !state.connected) {
             box.textContent = '(disconnected)';
             setRigBadge();
+            if (fpMounted && window.CATFrontPanel) window.CATFrontPanel.applyState(state);
             return;
         }
         const fmt = (hz) => Number(hz || 0).toLocaleString('en-US');
@@ -197,6 +198,7 @@ const CATMode = (function() {
             state.ptt ? 'tx' : 'connected'
         );
         setRigBadge();
+        if (fpMounted && window.CATFrontPanel) window.CATFrontPanel.applyState(state);
     }
 
     function renderSupervisor(sv) {
@@ -266,6 +268,8 @@ const CATMode = (function() {
         applyPrefs(rig.rig_id);
         setRigBadge();
         if (initialized) Macros.refresh().catch(() => {});
+        // If the front panel view is showing, swap in the new rig's skin.
+        if (initialized && currentView === 'frontpanel') mountFrontPanel();
     }
 
     async function refreshPorts() {
@@ -549,6 +553,89 @@ const CATMode = (function() {
         }
     }
 
+    /* --------------------------------------------------------------------
+     *  Virtual front panel view
+     *  A skinnable hardware replica that lives inside the CAT visuals as an
+     *  alternate view to the raw terminal. The controller + skins are loaded
+     *  lazily the first time the operator switches to the Front Panel view.
+     * ------------------------------------------------------------------ */
+    let currentView = 'terminal';
+    let fpMounted = false;
+
+    function ensureFrontPanelController() {
+        if (window.CATFrontPanel) return Promise.resolve();
+        const SRC = '/static/js/modes/cat-frontpanel.js';
+        if (document.querySelector('script[data-cat-fp="1"]')) {
+            return new Promise(res => {
+                let n = 0;
+                const t = setInterval(() => {
+                    if (window.CATFrontPanel || n++ > 75) { clearInterval(t); res(); }
+                }, 40);
+            });
+        }
+        return new Promise(res => {
+            const s = document.createElement('script');
+            s.src = SRC;
+            s.dataset.catFp = '1';
+            s.onload = () => res();
+            s.onerror = () => { console.warn('[CAT] front panel controller failed to load'); res(); };
+            document.body.appendChild(s);
+        });
+    }
+
+    function ctxForFrontPanel() {
+        return {
+            post: (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) }),
+            power: () => { (lastState && lastState.connected) ? disconnect() : connect(); },
+            getState: () => lastState,
+            toast: (msg, isErr) => termAppend(isErr ? 'err' : 'sys', msg),
+        };
+    }
+
+    async function mountFrontPanel() {
+        const host = $('catFrontPanel');
+        if (!host) return;
+        await ensureFrontPanelController();
+        if (!window.CATFrontPanel) return;
+        const rig = selectedRig();
+        const rigId = (rig && rig.rig_id) || $('catRigSelect')?.value || 'kenwood_ts850';
+        const caps = (rig && rig.capabilities) || [];
+        try {
+            await window.CATFrontPanel.mount({ rigId, container: host, caps, ctx: ctxForFrontPanel() });
+            fpMounted = true;
+            if (lastState) window.CATFrontPanel.applyState(lastState);
+        } catch (err) {
+            console.warn('[CAT] front panel mount:', err);
+        }
+    }
+
+    function unmountFrontPanel() {
+        if (window.CATFrontPanel) { try { window.CATFrontPanel.unmount(); } catch (_) {} }
+        fpMounted = false;
+    }
+
+    function setView(view) {
+        currentView = view === 'frontpanel' ? 'frontpanel' : 'terminal';
+        document.querySelectorAll('.cat-vis-viewtoggle button').forEach(b => {
+            b.classList.toggle('active', b.dataset.view === currentView);
+        });
+        const fp = $('catFrontPanel');
+        const term = $('catTerminal');
+        const livestate = document.querySelector('#catVisuals .cat-vis-livestate');
+        if (currentView === 'frontpanel') {
+            if (fp) fp.hidden = false;
+            if (term) term.style.display = 'none';
+            if (livestate) livestate.style.display = 'none';
+            mountFrontPanel();
+        } else {
+            if (fp) fp.hidden = true;
+            if (term) term.style.display = '';
+            if (livestate) livestate.style.display = '';
+            unmountFrontPanel();
+        }
+        try { localStorage.setItem('cat.view', currentView); } catch (_) {}
+    }
+
     function init() {
         if (initialized) {
             // Re-entering the mode — just refresh.
@@ -559,6 +646,11 @@ const CATMode = (function() {
         }
         initialized = true;
         Promise.all([refreshRigs(), refreshPorts(), refreshSupervisor(), refreshStatus()])
+            .then(() => {
+                let saved = 'terminal';
+                try { saved = localStorage.getItem('cat.view') || 'terminal'; } catch (_) {}
+                if (saved === 'frontpanel') setView('frontpanel');
+            })
             .catch(err => console.warn('[CAT] init:', err));
         openStream();
         const raw = $('catRawCmd');
@@ -589,6 +681,7 @@ const CATMode = (function() {
 
     function destroy() {
         closeStream();
+        unmountFrontPanel();
     }
 
     function isActive() { return !!evtSource; }
@@ -915,5 +1008,5 @@ const CATMode = (function() {
     return { init, destroy, isActive, connect, disconnect, refreshPorts,
              setVfo, selectVfo, setMode, setSplit, setRit, clearRit,
              sendRaw, updateSupervisor, probe, clearTerminal, refreshStatus,
-             togglePolling };
+             togglePolling, setView };
 })();

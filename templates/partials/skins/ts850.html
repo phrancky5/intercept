@@ -1,0 +1,254 @@
+<!-- Kenwood TS-850S virtual front panel skin.
+     Served by /cat/frontpanel/kenwood_ts850 and injected into #catFrontPanel
+     by static/js/modes/cat-frontpanel.js. Interactivity is declared purely
+     via data-act / data-knob / data-role attributes (see the controller). -->
+<section class="cat-fp-stage ts850-skin" data-rig="kenwood_ts850" data-connected="0">
+  <div class="fp-frame">
+
+    <!-- ═══ Row 1 ═══ POWER · LCD · NOTCH/NB ═══ -->
+    <div class="fp-zone fp-power">
+      <div class="zone-title">POWER</div>
+      <div class="rocker" data-act="power" role="button" tabindex="0"
+           title="Click ON to connect CAT · OFF to disconnect">
+        <span class="rk-on">ON</span><span class="rk-off">OFF</span>
+      </div>
+      <div class="led-row">
+        <span class="led" title="VOX"></span>
+        <span class="led" title="FULL"></span>
+        <span class="led" title="AIP"></span>
+        <span class="led" title="HI BOOST"></span>
+      </div>
+      <div class="micro-buttons">
+        <button class="fp-btn tiny" type="button">MAN</button>
+        <button class="fp-btn tiny" type="button">SEMI</button>
+        <button class="fp-btn tiny" type="button">AIP</button>
+        <button class="fp-btn tiny" type="button">DIM</button>
+      </div>
+    </div>
+
+    <div class="fp-zone fp-lcd-zone">
+      <div class="fp-lcd">
+        <!-- Analog multimeter (SVG, driven from CAT S-meter) -->
+        <div class="lcd-multimeter" title="Analog meter — driven by CAT S-meter">
+          <div class="lcd-meter-host" data-role="smeter-host"></div>
+          <div class="lcd-smeter-readout">
+            <span class="lcd-smeter-label">S</span>
+            <span class="lcd-smeter-val" data-role="smeter-val">0</span>
+            <span class="lcd-smeter-dbm" data-role="smeter-dbm">--- dBm</span>
+          </div>
+        </div>
+
+        <!-- Segmented LCD: chip strip + 7-seg freq + mode legend -->
+        <div class="lcd-screen">
+          <div class="lcd-chips lcd-chips-top">
+            <span class="lcd-chip" data-role="memch" data-off title="Memory channel">M.CH</span>
+            <span class="lcd-chip" data-off title="Program scan">PRG</span>
+            <span class="lcd-chip" data-off title="Scan">SCAN</span>
+            <span class="lcd-chip" data-role="split" data-off title="Split">SPLIT</span>
+            <span class="lcd-chip" data-role="rit" data-off title="RIT active">RIT</span>
+            <span class="lcd-chip" data-role="xit" data-off title="XIT active">XIT</span>
+          </div>
+
+          <div class="lcd-main">
+            <span class="lcd-7seg lcd-freq" data-role="freq" title="Active VFO frequency">--.---.--</span>
+            <span class="lcd-unit">kHz</span>
+            <span class="lcd-7seg lcd-offset" data-role="offset" data-off title="RIT/XIT offset (Hz)">----</span>
+          </div>
+
+          <div class="lcd-chips lcd-chips-bot">
+            <span class="lcd-chip fp-mode-chip" data-mode="LSB" data-off>LSB</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="USB" data-off>USB</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="CW" data-off>CW</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="FSK" data-off>FSK</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="FM" data-off>FM</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="AM" data-off>AM</span>
+            <span class="lcd-chip" data-off title="Antenna tuner">TUNE</span>
+          </div>
+        </div>
+      </div>
+      <div class="fp-brand">KENWOOD <span>HF TRANSCEIVER TS-850S</span></div>
+      <div class="led-strip">
+        <span class="led-tag"><span class="led" data-led="onair"></span>ON AIR</span>
+        <span class="led-tag"><span class="led"></span>AT TUNE</span>
+        <span class="led-tag"><span class="led"></span>AIP</span>
+        <span class="led-tag"><span class="led"></span>MHz</span>
+        <span class="led-tag"><span class="led"></span>NOTCH</span>
+      </div>
+    </div>
+
+    <div class="fp-zone fp-notch">
+      <div class="knob-pair">
+        <div class="knob-cell">
+          <div class="zone-title small">NOTCH &middot; SQL</div>
+          <button class="fp-knob lg" type="button" data-knob="squelch"
+                  title="Squelch (0 open … 255 closed)"></button>
+          <span class="knob-val" data-knob-val="squelch">—</span>
+          <div class="scale-arc"><span>0</span><span>SQL</span></div>
+        </div>
+        <div class="knob-cell">
+          <div class="zone-title small">NB LEVEL</div>
+          <button class="fp-knob lg" type="button" data-act="nb-toggle"
+                  title="Toggle Noise Blanker"></button>
+          <div class="scale-arc"><span>NB1</span><span>NB2</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Row 2 ═══ AGC · FILTER · MODE+VFO · FUNCTION · RIT/AF · SPECTRUM ═══ -->
+    <div class="fp-zone fp-agc">
+      <div class="led-stack">
+        <span class="led-tag"><span class="led"></span>REC/SEND</span>
+        <span class="led-tag"><span class="led"></span>THRU/AUTO</span>
+        <span class="led-tag"><span class="led"></span>AT TUNE</span>
+      </div>
+      <div class="knob-row two">
+        <div class="knob-cell">
+          <div class="zone-title small">AGC</div>
+          <button class="fp-knob md" type="button" data-knob="agc" title="AGC FAST/SLOW"></button>
+          <span class="knob-val" data-knob-val="agc">—</span>
+          <div class="scale-arc small"><span>FAST</span><span>SLOW</span></div>
+        </div>
+        <div class="knob-cell">
+          <div class="zone-title small">KEY SPEED</div>
+          <button class="fp-knob md" type="button" data-knob="keyer" title="Keyer WPM"></button>
+          <span class="knob-val" data-knob-val="keyer">—</span>
+          <div class="scale-arc small"><span>5</span><span>60</span></div>
+        </div>
+      </div>
+      <div class="knob-row two">
+        <div class="knob-cell">
+          <div class="zone-title small">PROC &middot; MONI</div>
+          <button class="fp-knob md" type="button"></button>
+          <div class="scale-arc small"><span>0</span><span>10</span></div>
+        </div>
+        <div class="knob-cell">
+          <div class="zone-title small">MIC &middot; PWR</div>
+          <button class="fp-knob md" type="button" data-knob="power" title="TX power (W)"></button>
+          <span class="knob-val" data-knob-val="power">—</span>
+          <div class="scale-arc small"><span>0 W</span><span>100 W</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fp-zone fp-filter">
+      <div class="zone-title">FILTER</div>
+      <div class="btn-grid-3">
+        <button class="fp-btn" type="button" data-act="filter-cycle">F1</button>
+        <button class="fp-btn" type="button" data-act="filter-cycle">F2</button>
+        <button class="fp-btn" type="button" data-act="filter-cycle">F3</button>
+      </div>
+      <div class="zone-title small">KEY</div>
+      <div class="btn-grid-3">
+        <button class="fp-btn" type="button">PLAY-1</button>
+        <button class="fp-btn" type="button">PLAY-2</button>
+        <button class="fp-btn" type="button">PLAY-3</button>
+        <button class="fp-btn" type="button">REC-1</button>
+        <button class="fp-btn" type="button">REC-2</button>
+        <button class="fp-btn" type="button">REC-3</button>
+      </div>
+      <div class="zone-title small">MEMORY</div>
+      <div class="btn-grid-3">
+        <button class="fp-btn" type="button">M1</button>
+        <button class="fp-btn" type="button">M2</button>
+        <button class="fp-btn" type="button">M3</button>
+      </div>
+    </div>
+
+    <div class="fp-zone fp-mode-vfo">
+      <div class="zone-title">MODE</div>
+      <div class="mode-col">
+        <button class="fp-btn mode" type="button" data-act="mode" data-mode-a="LSB" data-mode-b="USB"
+                title="Toggle LSB ↔ USB">
+          <span class="m1">LSB</span><span class="m2">USB</span>
+        </button>
+        <button class="fp-btn mode" type="button" data-act="mode" data-mode-a="CW" data-mode-b="FSK"
+                title="Toggle CW ↔ FSK">
+          <span class="m1">CW</span><span class="m2">FSK</span>
+        </button>
+        <button class="fp-btn mode" type="button" data-act="mode" data-mode-a="FM" data-mode-b="AM"
+                title="Toggle FM ↔ AM">
+          <span class="m1">FM</span><span class="m2">AM</span>
+        </button>
+      </div>
+      <div class="vfo-wrap">
+        <button class="fp-vfo" data-act="vfo-dial" type="button"
+                title="Wheel = step · Click = enter Hz">
+          <span class="vfo-marker"></span>
+          <span class="vfo-grip"></span>
+        </button>
+        <div class="step-row">
+          <button class="fp-btn tiny" type="button" data-act="step" data-dir="down">◀ STEP</button>
+          <button class="fp-btn tiny" type="button" data-act="step" data-dir="up">STEP ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fp-zone fp-function">
+      <div class="zone-title">FUNCTION</div>
+      <div class="rxtx-grid">
+        <span class="rxtx-h">RX</span><span class="rxtx-h">TX</span>
+        <button class="fp-btn" type="button" data-act="select-vfo" data-vfo="A" title="RX VFO A">A</button>
+        <button class="fp-btn" type="button" data-act="split-toggle" title="Toggle Split">SPLIT</button>
+        <button class="fp-btn" type="button" data-act="select-vfo" data-vfo="B" title="RX VFO B">B</button>
+        <button class="fp-btn ptt" type="button" data-act="ptt" title="PTT (TX) — gated by Supervisor TX lock">PTT</button>
+      </div>
+      <div class="updown">
+        <button class="fp-btn" type="button" data-act="step" data-dir="down" title="Step down">▼ DOWN</button>
+        <button class="fp-btn" type="button" data-act="step" data-dir="up" title="Step up">UP ▲</button>
+      </div>
+    </div>
+
+    <div class="fp-zone fp-right">
+      <div class="knob-row two">
+        <div class="knob-cell">
+          <div class="zone-title small">RIT/XIT</div>
+          <button class="fp-knob md" type="button" data-act="rit-toggle" title="Toggle RIT"></button>
+          <div class="scale-arc small"><span>off</span><span>on</span></div>
+        </div>
+        <div class="knob-cell">
+          <div class="zone-title small">AF · RF</div>
+          <button class="fp-knob md" type="button" data-knob="af" title="AF gain"></button>
+          <span class="knob-val" data-knob-val="af">—</span>
+          <div class="scale-arc small"><span>0</span><span>AF</span></div>
+        </div>
+      </div>
+      <div class="knob-row two">
+        <div class="knob-cell">
+          <div class="zone-title small">SLOPE HIGH</div>
+          <button class="fp-knob md" type="button"></button>
+          <div class="scale-arc small"><span>LO</span><span>HI</span></div>
+        </div>
+        <div class="knob-cell">
+          <div class="zone-title small">LOW · HIGH</div>
+          <button class="fp-knob md" type="button"></button>
+          <div class="scale-arc small"><span>NORM</span><span>NORM</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SPECTRUM (panadapter placeholder — SDR integration later) ═══ -->
+    <div class="fp-zone fp-spectrum">
+      <div class="zone-title">SPECTRUM</div>
+      <div class="fp-spec-controls">
+        <label>SDR
+          <select disabled>
+            <option>HackRF</option><option>RTL-SDR</option><option>Airspy</option>
+          </select>
+        </label>
+        <label>Freq (MHz)
+          <input type="number" value="14.250" step="0.001" disabled>
+        </label>
+        <button class="fp-btn tiny" type="button" data-act="spec-start">▶ START</button>
+        <button class="fp-btn tiny" type="button" data-act="spec-stop">■ STOP</button>
+        <span data-role="spec-status">off</span>
+      </div>
+      <div class="fp-spec-screen">
+        <div class="fp-spec-overlay">
+          PANADAPTER
+          <small>SDR integration coming soon — will reuse the spectrum worker</small>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>

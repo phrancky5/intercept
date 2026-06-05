@@ -2,6 +2,19 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.27.2] - 2026-06-05
+
+### Added
+- **CAT virtual front panel** — A skinnable hardware replica that runs as an alternate view inside the CAT module, debuting with the Kenwood TS-850S. Toggle between **Terminal** and **Front Panel** from the CAT header; the chosen view is remembered (`localStorage`). The panel shows a live LCD (active-VFO frequency, mode legend, SPLIT/RIT/XIT indicators, RIT offset, memory channel), an analog multimeter driven by the CAT S-meter, an ON-AIR LED, and an interactive VFO dial, mode keys, STEP, A/B select, SPLIT, RIT and PTT.
+- **Generic skin + controller architecture** — Skins are plain HTML partials served from `/cat/frontpanel/<rig_id>`; they declare all interactivity through `data-act` / `data-knob` / `data-role` attributes, so adding a new transceiver needs only an HTML skin + CSS and two registry entries — no controller JavaScript changes. The controller (`static/js/modes/cat-frontpanel.js`) handles event dispatch, state rendering and asset loading.
+- **Capability-aware controls** — Each control is wired only if the rig's CAT capability set (from the registry) supports it; unsupported controls render but are visually disabled. On the TS-850 this correctly greys out the AF/RF/SQL/PWR knobs (that 1991 firmware never exposed them over CAT) while keeping VFO/mode/split/RIT/filter/step/PTT live.
+- **Analog multimeter widget** — New pure-SVG `static/js/core/cat-smeter.js` (`window.CatSMeter`) with S / PO / SWR / Id / COMP scales sharing one needle. No bitmap assets.
+- **Spectrum panel placeholder** — The skin includes a panadapter zone wired to a "coming soon" state, ready to hook into the SDR spectrum worker in a later step.
+
+### Changed
+- `routes/cat.py` adds `GET /cat/frontpanel/<rig_id>`, serving skin partials through a `rig_id → skin` allowlist (no path traversal).
+- Bumped version to 2.27.2 (also cache-busts `cat.js` so the new view toggle appears without a manual hard-refresh).
+
 ## [2.27.1] - 2026-06-05
 
 ### Added

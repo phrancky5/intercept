@@ -1,0 +1,75 @@
+/* Kenwood TS-850S skin — layout only.
+ * All component chrome (knobs, buttons, LEDs, LCD, meter) lives in the
+ * rig-neutral base stylesheet (css/modes/cat-frontpanel.css). This file
+ * only places the zones on the TS-850S's two-row grid + a few skin tweaks.
+ */
+
+.ts850-skin .fp-frame {
+  grid-template-columns:
+    200px                /* power / agc */
+    minmax(220px, 1fr)   /* lcd / filter */
+    minmax(200px, 0.9fr) /* lcd / mode-vfo */
+    180px                /* notch / function */
+    200px                /* notch / right knobs */
+    minmax(280px, 1.1fr);/* spectrum (spans both rows) */
+  grid-template-areas:
+    "power lcd      lcd      notch    notch  spectrum"
+    "agc   filter   mode-vfo function right  spectrum";
+  align-items: stretch;
+}
+
+.ts850-skin .fp-power    { grid-area: power; }
+.ts850-skin .fp-lcd-zone { grid-area: lcd; }
+.ts850-skin .fp-notch    { grid-area: notch; }
+.ts850-skin .fp-agc      { grid-area: agc; }
+.ts850-skin .fp-filter   { grid-area: filter; }
+.ts850-skin .fp-mode-vfo { grid-area: mode-vfo; }
+.ts850-skin .fp-function { grid-area: function; }
+.ts850-skin .fp-right    { grid-area: right; }
+.ts850-skin .fp-spectrum { grid-area: spectrum; }
+
+/* MODE + VFO zone internal layout */
+.ts850-skin .fp-mode-vfo {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.ts850-skin .fp-mode-vfo > .zone-title { grid-column: 1 / -1; }
+.ts850-skin .mode-col { display: flex; flex-direction: column; gap: 5px; }
+.ts850-skin .mode-col .fp-btn { width: 100%; min-height: 30px; }
+
+/* Spectrum zone fills its column */
+.ts850-skin .fp-spectrum { min-width: 0; }
+.ts850-skin .fp-spectrum .fp-spec-screen { flex: 1; }
+
+/* Narrow viewports: collapse the 6-column desk into stacked blocks so the
+   panel stays usable inside the CAT mode pane on smaller screens. */
+@media (max-width: 1200px) {
+  .ts850-skin .fp-frame {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "power    lcd"
+      "lcd      lcd"
+      "agc      filter"
+      "mode-vfo function"
+      "notch    right"
+      "spectrum spectrum";
+  }
+}
+
+@media (max-width: 720px) {
+  .ts850-skin .fp-frame {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "lcd"
+      "power"
+      "mode-vfo"
+      "function"
+      "agc"
+      "filter"
+      "notch"
+      "right"
+      "spectrum";
+  }
+}

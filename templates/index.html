@@ -2343,6 +2343,10 @@
                             <span id="catStatusLabel">Disconnected</span>
                         </div>
                         <div class="cat-vis-toolbar">
+                            <div class="cat-vis-viewtoggle" role="tablist" aria-label="CAT view">
+                                <button type="button" data-view="terminal" class="active" onclick="CATMode.setView('terminal')">Terminal</button>
+                                <button type="button" data-view="frontpanel" onclick="CATMode.setView('frontpanel')">Front Panel</button>
+                            </div>
                             <label><input type="checkbox" id="catAutoscroll" checked> autoscroll</label>
                             <label title="Periodic safety-net polling on the CAT bus. Off = AI-pushes only."><input type="checkbox" id="catPollingToggle" checked onchange="CATMode.togglePolling(this.checked)"> poll</label>
                             <button class="preset-btn" type="button" onclick="CATMode.clearTerminal()">clear</button>
@@ -2350,6 +2354,7 @@
                             <button class="preset-btn" type="button" onclick="CATMode.refreshStatus()">Poll IF;</button>
                         </div>
                     </div>
+                    <div id="catFrontPanel" class="cat-fp" hidden></div>
                     <pre id="catTerminal" class="cat-vis-terminal"></pre>
                     <div class="cat-vis-input">
                         <span class="cat-vis-prompt">&gt;</span>

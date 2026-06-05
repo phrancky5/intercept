@@ -7,10 +7,20 @@ import os
 import sys
 
 # Application version
-VERSION = "2.27.0"
+VERSION = "2.27.2"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.27.2",
+        "date": "June 2026",
+        "highlights": [
+            "Feat: CAT virtual front panel — skinnable hardware replica (Kenwood TS-850S) with live LCD, analog S-meter, VFO dial and controls; toggle Terminal/Front Panel in the CAT header",
+            "Feat: generic skin + controller architecture — new rigs add an HTML skin + CSS only, with capability-aware controls",
+            "Feat: CAT host-side serial bridge (cat_bridge.py) bypasses Docker/WSL serial passthrough, with rigctld TCP relay for WSJT-X/Fldigi",
+            "Feat: bridge status badge and verbose debugging in the CAT module",
+        ],
+    },
     {
         "version": "2.27.0",
         "date": "May 2026",

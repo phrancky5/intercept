@@ -17,7 +17,8 @@ import threading
 import time
 from typing import Any
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, render_template, request
+from jinja2 import TemplateNotFound
 
 import app as app_module
 from utils.cat import (
@@ -872,6 +873,38 @@ def cat_stream() -> Response:
     response.headers['X-Accel-Buffering'] = 'no'
     response.headers['Connection'] = 'keep-alive'
     return response
+
+
+# --- Virtual front panel skins ----------------------------------------------
+# Serves a rig's front panel HTML partial. The controller
+# (static/js/modes/cat-frontpanel.js) fetches this, injects it into the CAT
+# view, and wires interactivity from the partial's data-* attributes.
+#
+# Maps a rig_id to its skin template stem. Only rigs with a hand-authored
+# skin appear here; the mapping (rather than using rig_id directly) keeps the
+# skin file names friendly (ts850, ftx1) and constrains the URL to a known
+# set so it can never select an arbitrary template (no path traversal).
+_FRONTPANEL_SKINS: dict[str, str] = {
+    'kenwood_ts850': 'ts850',
+    # 'yaesu_ftx1': 'ftx1',  # future
+}
+
+
+@cat_bp.route('/cat/frontpanel/<rig_id>', methods=['GET'])
+def cat_frontpanel(rig_id: str):
+    rig_id = (rig_id or '').strip()
+    skin = _FRONTPANEL_SKINS.get(rig_id)
+    if skin is None:
+        return api_error(
+            f'no front panel skin for {rig_id!r}',
+            404,
+            'no_skin',
+        )
+    try:
+        html = render_template(f'partials/skins/{skin}.html')
+    except TemplateNotFound:
+        return api_error('skin template missing', 404, 'no_skin')
+    return Response(html, mimetype='text/html')
 
 
 # --- Command catalog & macros ------------------------------------------------
