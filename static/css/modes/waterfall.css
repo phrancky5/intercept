@@ -143,7 +143,7 @@
 .wf-rx-vfo-bottom {
     font-family: var(--font-mono, monospace);
     font-size: 10px;
-    color: var(--text-dim);
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
@@ -1202,10 +1202,12 @@ html[data-ui-tier="enhanced"] .wf-headline-tag {
 html[data-ui-tier="enhanced"] .wf-rx-vfo {
     border-color: rgba(46, 125, 138, 0.25);
     background: linear-gradient(180deg, rgba(3, 8, 8, 0.92) 0%, rgba(1, 4, 4, 0.95) 100%);
+    background: linear-gradient(180deg, rgb(23, 74, 74) 0%, rgba(17, 77, 77, 0.81) 50%);
+    box-shadow: inset 0 0 11px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 0 15px rgba(0, 50, 50, 0.2);
 }
 
 html[data-ui-tier="enhanced"] .wf-rx-vfo-status {
-    color: rgba(65, 175, 192, 0.88);
+    color: var(--accent-amber);
 }
 
 html[data-ui-tier="enhanced"] .wf-rx-vfo-readout {
