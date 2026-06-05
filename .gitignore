@@ -51,6 +51,12 @@ intercept_agent_*.cfg
 /tmp/
 *.tmp
 
+# Build/run artifacts (captured stdout/stderr)
+*.err
+
+# Local Docker overrides (per-machine, e.g. Windows usbipd passthrough)
+docker-compose.override.yml
+
 # Weather satellite runtime data (decoded images, samples, SatDump output)
 data/weather_sat/
 
