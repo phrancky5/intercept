@@ -103,13 +103,13 @@ The UI is split between a thin sidebar (rig controls that don't need real estate
 
 ### Main view — `#catVisuals` in `templates/index.html`
 - **Connection panel** (collapsible `<details>`) — transceiver, serial port, baud, data / parity / stop, RTS/DTR, Connect / Disconnect. Auto-collapses on successful connect and re-opens on disconnect. Framing fields auto-fill from the selected rig descriptor (TS-850 → `8N2`, FTX-1 → `8N1`).
-- **Toolbar** — RIG name badge, connection-state dot, `autoscroll` checkbox, `poll` checkbox (toggles `/cat/polling` at runtime), `clear`, **Probe** (runs `/cat/probe` diagnostic and echoes results to the terminal), `Poll IF;` (one-shot refresh).
+- **Toolbar** — RIG name badge, connection-state dot, **Terminal / Front Panel** view toggle, `autoscroll` checkbox, `poll` checkbox (toggles `/cat/polling` at runtime), `clear`, **Probe** (runs `/cat/probe` diagnostic and echoes results to the terminal), `Poll IF;` (one-shot refresh). When connected via the host bridge a **BRIDGE** badge and a three-LED strip show the active bridge environment-variable states (see §12.6).
 - **CAT terminal** — colour-coded log of every TX / RX frame, system messages, and probe verdicts. Capped at ~500 lines.
 - **Raw input** — type a command and press Enter or click **Send**. Trailing `;` is added automatically. While TX-lock is on, only `TX` / `KY` / `KS` commands are refused; queries and mode/VFO/AI commands work freely.
 - **Live state** pane — human-readable summary of `RigState` (VFO A/B, mode, split, RIT, PTT, S-meter, AGC, AF/RF/SQL, power, keyer).
 
 ### Controller — `static/js/modes/cat.js`
-IIFE `CATMode` matching the pattern of every other mode module. Uses `EventSource('/cat/stream')` and won't overwrite an input while the user is typing in it. Public surface: `init`, `destroy`, `connect`, `disconnect`, `refreshPorts`, `setVfo`, `selectVfo`, `setMode`, `setSplit`, `setRit`, `clearRit`, `sendRaw`, `updateSupervisor`, `probe`, `clearTerminal`, `refreshStatus`, `togglePolling`.
+IIFE `CATMode` matching the pattern of every other mode module. Uses `EventSource('/cat/stream')` and won't overwrite an input while the user is typing in it. Public surface: `init`, `destroy`, `connect`, `disconnect`, `refreshPorts`, `setVfo`, `selectVfo`, `setMode`, `setSplit`, `setRit`, `clearRit`, `sendRaw`, `updateSupervisor`, `probe`, `clearTerminal`, `refreshStatus`, `togglePolling`, `setView`.
 
 ### Styles
 `static/css/modes/cat.css` — scoped, uses existing CSS tokens (`--accent`, `--accent-cyan`, `--accent-green`, `--accent-red`, `--bg-card`, `--border-dim`, `--font-mono`, `--text-dim`).
@@ -536,6 +536,20 @@ In the Intercept CAT UI, a **BRIDGE** badge appears next to the rig name:
 
 The connection summary also shows `[via bridge]` when connected through
 the host bridge.
+
+When the bridge is reachable, a **three-LED strip** appears to the right
+of the BRIDGE badge, reflecting the live bridge environment-variable
+states fetched from `/info`:
+
+| LED | Colour when on | Environment variable | Meaning |
+|-----|---------------|----------------------|---------|
+| **RIGCTLD** | Green | `RIGCTLD_ENABLE=1` | rigctld TCP relay is running on port 4532 |
+| **TX LOCK** | Amber | `BRIDGE_TX_LOCK=1` | PTT from rigctld clients is refused (safe default) |
+| **DEBUG** | Cyan | `RIGCTLD_DEBUG=1` | Verbose rigctld command logging is active |
+
+A dim (unlit) dot means the flag is off. Hover each LED for a plain-English
+tooltip. The strip is hidden if the bridge is unreachable or has not yet
+returned config data.
 
 ### 12.7 WSL alternative
 

@@ -346,15 +346,28 @@ def cat_status():
         'reachable': False,
     }
     
-    # Check if bridge is reachable
+    # Check if bridge is reachable, and pull config flags from /info
     if bridge_info['enabled']:
         try:
             import requests
-            resp = requests.get(
-                f"{bridge_info['url']}/health",
-                timeout=2
-            )
+            from utils.cat.bridge_client import _auth_headers
+            url = bridge_info['url']
+            resp = requests.get(f'{url}/health', timeout=2)
             bridge_info['reachable'] = resp.status_code == 200
+            if bridge_info['reachable']:
+                try:
+                    info_resp = requests.get(
+                        f'{url}/info',
+                        headers=_auth_headers(),
+                        timeout=2,
+                    )
+                    if info_resp.status_code == 200:
+                        bdata = info_resp.json().get('bridge', {})
+                        bridge_info['rigctld_enabled'] = bdata.get('rigctld_enabled', False)
+                        bridge_info['tx_lock'] = bdata.get('tx_lock', False)
+                        bridge_info['rigctld_debug'] = bdata.get('debug', False)
+                except Exception:
+                    pass
         except Exception:
             bridge_info['reachable'] = False
     

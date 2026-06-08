@@ -1,7 +1,8 @@
 <!-- Kenwood TS-850S virtual front panel skin.
      Served by /cat/frontpanel/kenwood_ts850 and injected into #catFrontPanel
      by static/js/modes/cat-frontpanel.js. Interactivity is declared purely
-     via data-act / data-knob / data-role attributes (see the controller). -->
+     via data-act / data-knob / data-role attributes (see the controller).
+     Hover tooltips use data-tip (see cat-frontpanel.css). -->
 <section class="cat-fp-stage ts850-skin" data-rig="kenwood_ts850" data-connected="0">
   <div class="fp-frame">
 
@@ -9,70 +10,102 @@
     <div class="fp-zone fp-power">
       <div class="zone-title">POWER</div>
       <div class="rocker" data-act="power" role="button" tabindex="0"
-           title="Click ON to connect CAT · OFF to disconnect">
+           data-tip="POWER ROCKER&#10;Click ON — opens the CAT serial link and connects to the rig.&#10;Click OFF — disconnects CAT; the radio stays powered.&#10;&#10;The green ON LED lights when the CAT link is established.">
         <span class="rk-on">ON</span><span class="rk-off">OFF</span>
       </div>
       <div class="led-row">
-        <span class="led" title="VOX"></span>
-        <span class="led" title="FULL"></span>
-        <span class="led" title="AIP"></span>
-        <span class="led" title="HI BOOST"></span>
+        <span class="led" data-tip="VOX LED&#10;Lights when Voice-Operated transmission is active on the rig. Not CAT-controllable on the TS-850."></span>
+        <span class="led" data-tip="FULL BREAK-IN LED&#10;Lit when the rig is in full QSK (CW break-in) mode — receiver opens between each dit/dah."></span>
+        <span class="led" data-tip="AIP LED&#10;Advanced Intercept Point filter is active. Reduces intermodulation from strong nearby signals."></span>
+        <span class="led" data-tip="HI BOOST LED&#10;High-frequency boost is active on the received audio (treble enhancement)."></span>
       </div>
       <div class="micro-buttons">
-        <button class="fp-btn tiny" type="button">MAN</button>
-        <button class="fp-btn tiny" type="button">SEMI</button>
-        <button class="fp-btn tiny" type="button">AIP</button>
-        <button class="fp-btn tiny" type="button">DIM</button>
+        <button class="fp-btn tiny" type="button"
+                data-tip="MAN (Manual ATU)&#10;Switches the internal antenna tuner to manual mode. Adjust capacitors/inductors manually via the TUNE controls.">MAN</button>
+        <button class="fp-btn tiny" type="button"
+                data-tip="SEMI (Semi-auto ATU)&#10;Tuner retunes when you transmit. Finds the nearest stored tune point for the current band.">SEMI</button>
+        <button class="fp-btn tiny" type="button"
+                data-tip="AIP (Advanced Intercept Point)&#10;Engages a front-end attenuator + DSP filter combination to reduce intermodulation from nearby broadcast stations.">AIP</button>
+        <button class="fp-btn tiny" type="button"
+                data-tip="DIM&#10;Dims the front-panel display backlight. Useful for night operation or dark environments.">DIM</button>
       </div>
     </div>
 
     <div class="fp-zone fp-lcd-zone">
       <div class="fp-lcd">
         <!-- Analog multimeter (SVG, driven from CAT S-meter) -->
-        <div class="lcd-multimeter" title="Analog meter — driven by CAT S-meter">
+        <div class="lcd-multimeter"
+             data-tip="ANALOG METER&#10;S (top row): received signal strength S1–S9, then +20/+40/+60 dB over S9.&#10;PO: forward TX power 0–250 W (active while transmitting).&#10;SWR: standing-wave ratio during TX tuning.&#10;Id: PA drain current (informational).&#10;COMP: speech processor compression in dB.&#10;&#10;The active scale switches automatically: S-meter on RX, PO on TX.">
           <div class="lcd-meter-host" data-role="smeter-host"></div>
           <div class="lcd-smeter-readout">
             <span class="lcd-smeter-label">S</span>
-            <span class="lcd-smeter-val" data-role="smeter-val">0</span>
-            <span class="lcd-smeter-dbm" data-role="smeter-dbm">--- dBm</span>
+            <span class="lcd-smeter-val" data-role="smeter-val"
+                  data-tip="S-METER VALUE&#10;Raw CAT reading 0–15.&#10;S1=–121 dBm … S9=–73 dBm.&#10;S9+20=–53 dBm, S9+40=–33 dBm, S9+60=–13 dBm.">0</span>
+            <span class="lcd-smeter-dbm" data-role="smeter-dbm"
+                  data-tip="SIGNAL LEVEL (dBm)&#10;Approximate received power converted from the S-meter reading.&#10;Reference: S9 = –73 dBm at the antenna terminal.">--- dBm</span>
           </div>
         </div>
 
         <!-- Segmented LCD: chip strip + 7-seg freq + mode legend -->
         <div class="lcd-screen">
           <div class="lcd-chips lcd-chips-top">
-            <span class="lcd-chip" data-role="memch" data-off title="Memory channel">M.CH</span>
-            <span class="lcd-chip" data-off title="Program scan">PRG</span>
-            <span class="lcd-chip" data-off title="Scan">SCAN</span>
-            <span class="lcd-chip" data-role="split" data-off title="Split">SPLIT</span>
-            <span class="lcd-chip" data-role="rit" data-off title="RIT active">RIT</span>
-            <span class="lcd-chip" data-role="xit" data-off title="XIT active">XIT</span>
+            <span class="lcd-chip" data-role="memch" data-off
+                  data-tip="M.CH — MEMORY CHANNEL&#10;Lit red when the rig is in Memory mode.&#10;Shows the current channel number (00–99).&#10;Dim = VFO mode.">M.CH</span>
+            <span class="lcd-chip" data-off
+                  data-tip="PRG — PROGRAM SCAN&#10;Lit during a programmed frequency scan between stored lower/upper limits.">PRG</span>
+            <span class="lcd-chip" data-off
+                  data-tip="SCAN&#10;Lit while the rig is scanning memory channels or a frequency range.">SCAN</span>
+            <span class="lcd-chip" data-role="split" data-off
+                  data-tip="SPLIT&#10;Lit when split TX/RX is active: you receive on VFO A and transmit on VFO B (or vice-versa).&#10;Standard practice for working DX pileups.&#10;Toggle with the SPLIT button in the FUNCTION zone.">SPLIT</span>
+            <span class="lcd-chip" data-role="rit" data-off
+                  data-tip="RIT — RECEIVER INCREMENTAL TUNING&#10;Lit when RIT is on.&#10;Shifts only the receive frequency by ±9999 Hz without moving the TX frequency.&#10;Useful for stations slightly off your TX frequency.&#10;Offset shown in the right-hand LCD field.">RIT</span>
+            <span class="lcd-chip" data-role="xit" data-off
+                  data-tip="XIT — TRANSMITTER INCREMENTAL TUNING&#10;Lit when XIT is on.&#10;Shifts the transmit frequency by the offset shown on the right.&#10;Receive frequency stays fixed.">XIT</span>
           </div>
 
           <div class="lcd-main">
-            <span class="lcd-7seg lcd-freq" data-role="freq" title="Active VFO frequency">--.---.--</span>
+            <span class="lcd-7seg lcd-freq" data-role="freq"
+                  data-tip="ACTIVE VFO FREQUENCY&#10;Format: MHz . kHz . 10 Hz&#10;Example: 14.250.00 = 14.250 MHz (20 m SSB)&#10;&#10;Shows VFO A when VFO A is selected as RX, VFO B when B is selected.">--.---.--</span>
             <span class="lcd-unit">kHz</span>
-            <span class="lcd-7seg lcd-offset" data-role="offset" data-off title="RIT/XIT offset (Hz)">----</span>
+            <span class="lcd-7seg lcd-offset" data-role="offset" data-off
+                  data-tip="RIT/XIT OFFSET&#10;Frequency offset applied to RX (RIT) or TX (XIT).&#10;Range: ±9999 Hz. Displayed as +/– Hz.&#10;Dim when RIT and XIT are both off.">----</span>
           </div>
 
           <div class="lcd-chips lcd-chips-bot">
-            <span class="lcd-chip fp-mode-chip" data-mode="LSB" data-off>LSB</span>
-            <span class="lcd-chip fp-mode-chip" data-mode="USB" data-off>USB</span>
-            <span class="lcd-chip fp-mode-chip" data-mode="CW" data-off>CW</span>
-            <span class="lcd-chip fp-mode-chip" data-mode="FSK" data-off>FSK</span>
-            <span class="lcd-chip fp-mode-chip" data-mode="FM" data-off>FM</span>
-            <span class="lcd-chip fp-mode-chip" data-mode="AM" data-off>AM</span>
-            <span class="lcd-chip" data-off title="Antenna tuner">TUNE</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="LSB" data-off
+                  data-tip="LSB — LOWER SIDEBAND&#10;Standard mode for HF voice below 10 MHz.&#10;Also used on 40 m, 80 m, 160 m.&#10;Carrier is suppressed; lower sideband is transmitted.">LSB</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="USB" data-off
+                  data-tip="USB — UPPER SIDEBAND&#10;Standard mode for HF voice 10 MHz and above (20 m, 17 m, 15 m, 12 m, 10 m).&#10;Also used for satellite (Mode B/J) and EME.">USB</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="CW" data-off
+                  data-tip="CW — CONTINUOUS WAVE (Morse)&#10;Keyer output via the KEY jack or CAT KY; command.&#10;CW-R (reverse) is the mirror image — useful to dodge QRM.">CW</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="FSK" data-off
+                  data-tip="FSK — FREQUENCY SHIFT KEYING&#10;RTTY (radioteletype) mode. Audio tones shift the carrier ±170 Hz.&#10;FSK-R = reversed mark/space for stations using opposite convention.">FSK</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="FM" data-off
+                  data-tip="FM — FREQUENCY MODULATION&#10;Used on 10 m, 6 m, 2 m where the rig has FM capability.&#10;Not common on HF bands below 28 MHz.">FM</span>
+            <span class="lcd-chip fp-mode-chip" data-mode="AM" data-off
+                  data-tip="AM — AMPLITUDE MODULATION&#10;Double-sideband with carrier. Less spectrum-efficient than SSB.&#10;Used for 160/80 m AM nets and shortwave listening.">AM</span>
+            <span class="lcd-chip" data-off
+                  data-tip="TUNE&#10;Lit when the rig is in ATU TUNE mode (MD8 — steady carrier for antenna tuner adjustment).&#10;Do not use on-air; transmit into a dummy load or very briefly.">TUNE</span>
           </div>
         </div>
       </div>
       <div class="fp-brand">KENWOOD <span>HF TRANSCEIVER TS-850S</span></div>
       <div class="led-strip">
-        <span class="led-tag"><span class="led" data-led="onair"></span>ON AIR</span>
-        <span class="led-tag"><span class="led"></span>AT TUNE</span>
-        <span class="led-tag"><span class="led"></span>AIP</span>
-        <span class="led-tag"><span class="led"></span>MHz</span>
-        <span class="led-tag"><span class="led"></span>NOTCH</span>
+        <span class="led-tag"
+              data-tip="ON AIR LED&#10;Lights red when the rig is transmitting (PTT active).&#10;Driven by the TX flag in the CAT IF; response.&#10;Also triggers the PTT button pulse animation.">
+          <span class="led" data-led="onair"></span>ON AIR</span>
+        <span class="led-tag"
+              data-tip="AT TUNE LED&#10;Lit while the internal antenna tuner is actively searching for a match. Goes out when tuning is complete.">
+          <span class="led"></span>AT TUNE</span>
+        <span class="led-tag"
+              data-tip="AIP LED&#10;Advanced Intercept Point filter is engaged. See AIP button in the POWER zone.">
+          <span class="led"></span>AIP</span>
+        <span class="led-tag"
+              data-tip="MHz LED&#10;Lit on some display modes to indicate the frequency readout is in MHz. Status only.">
+          <span class="led"></span>MHz</span>
+        <span class="led-tag"
+              data-tip="NOTCH LED&#10;Lit when the DSP or IF notch filter is active. The notch removes a single interfering carrier from the audio passband.">
+          <span class="led"></span>NOTCH</span>
       </div>
     </div>
 
@@ -81,14 +114,14 @@
         <div class="knob-cell">
           <div class="zone-title small">NOTCH &middot; SQL</div>
           <button class="fp-knob lg" type="button" data-knob="squelch"
-                  title="Squelch (0 open … 255 closed)"></button>
+                  data-tip="NOTCH / SQUELCH KNOB&#10;Scroll: adjust squelch threshold (0–255).&#10;0 = fully open (audio always on).&#10;Higher values silence audio until a signal exceeds the threshold.&#10;Click: type an exact value.&#10;&#10;Note: squelch is not CAT-controllable on the TS-850 firmware — this control is greyed if the rig doesn&#39;t support it."></button>
           <span class="knob-val" data-knob-val="squelch">—</span>
           <div class="scale-arc"><span>0</span><span>SQL</span></div>
         </div>
         <div class="knob-cell">
           <div class="zone-title small">NB LEVEL</div>
           <button class="fp-knob lg" type="button" data-act="nb-toggle"
-                  title="Toggle Noise Blanker"></button>
+                  data-tip="NOISE BLANKER&#10;Click to toggle NB on/off.&#10;&#10;Reduces impulse noise: power-line hash, car ignition, switching power supplies.&#10;NB1 = mild blanking. NB2 = aggressive (may distort strong SSB signals).&#10;Turn off if NB causes audio distortion on SSB."></button>
           <div class="scale-arc"><span>NB1</span><span>NB2</span></div>
         </div>
       </div>
@@ -97,20 +130,28 @@
     <!-- ═══ Row 2 ═══ AGC · FILTER · MODE+VFO · FUNCTION · RIT/AF · SPECTRUM ═══ -->
     <div class="fp-zone fp-agc">
       <div class="led-stack">
-        <span class="led-tag"><span class="led"></span>REC/SEND</span>
-        <span class="led-tag"><span class="led"></span>THRU/AUTO</span>
-        <span class="led-tag"><span class="led"></span>AT TUNE</span>
+        <span class="led-tag"
+              data-tip="REC/SEND LED&#10;Lit during a CW memory keyer message playback (SEND) or while recording a keyer message (REC).">
+          <span class="led"></span>REC/SEND</span>
+        <span class="led-tag"
+              data-tip="THRU/AUTO LED&#10;THRU = antenna tuner bypassed (signal passes straight through).&#10;AUTO = tuner will retune automatically when band changes.">
+          <span class="led"></span>THRU/AUTO</span>
+        <span class="led-tag"
+              data-tip="AT TUNE LED&#10;Antenna Tuner is actively searching for a match. Goes out when done.">
+          <span class="led"></span>AT TUNE</span>
       </div>
       <div class="knob-row two">
         <div class="knob-cell">
           <div class="zone-title small">AGC</div>
-          <button class="fp-knob md" type="button" data-knob="agc" title="AGC FAST/SLOW"></button>
+          <button class="fp-knob md" type="button" data-knob="agc"
+                  data-tip="AGC — AUTO GAIN CONTROL&#10;Scroll: cycle through FAST / MED / SLOW.&#10;Click: type a value (0=FAST, 1=MED, 2=SLOW).&#10;&#10;FAST: quick recovery from signal dropouts; good for SSB pile-ups.&#10;SLOW: smoother audio on CW and steady SSB signals; reduces pumping.&#10;&#10;Note: not CAT-controllable on the TS-850 — greyed if unsupported."></button>
           <span class="knob-val" data-knob-val="agc">—</span>
           <div class="scale-arc small"><span>FAST</span><span>SLOW</span></div>
         </div>
         <div class="knob-cell">
           <div class="zone-title small">KEY SPEED</div>
-          <button class="fp-knob md" type="button" data-knob="keyer" title="Keyer WPM"></button>
+          <button class="fp-knob md" type="button" data-knob="keyer"
+                  data-tip="KEYER SPEED&#10;Scroll: adjust iambic keyer speed (5–60 WPM).&#10;Click: type exact WPM.&#10;&#10;Controls the built-in electronic keyer. Attach a paddle to the KEY jack.&#10;Typical speeds: 15–20 WPM conversational, 25–35 WPM contest.&#10;&#10;Note: keyer speed is not CAT-controllable on the TS-850 — greyed if unsupported."></button>
           <span class="knob-val" data-knob-val="keyer">—</span>
           <div class="scale-arc small"><span>5</span><span>60</span></div>
         </div>
@@ -118,12 +159,14 @@
       <div class="knob-row two">
         <div class="knob-cell">
           <div class="zone-title small">PROC &middot; MONI</div>
-          <button class="fp-knob md" type="button"></button>
+          <button class="fp-knob md" type="button"
+                  data-tip="SPEECH PROCESSOR / MONITOR&#10;Controls the TX audio processor (PROC) compression level and the sidetone monitor volume.&#10;&#10;Higher PROC = more average power on SSB, but may reduce audio quality.&#10;MONI lets you hear your own transmitted audio through the speaker.&#10;&#10;Display-only — not CAT-controllable on the TS-850."></button>
           <div class="scale-arc small"><span>0</span><span>10</span></div>
         </div>
         <div class="knob-cell">
           <div class="zone-title small">MIC &middot; PWR</div>
-          <button class="fp-knob md" type="button" data-knob="power" title="TX power (W)"></button>
+          <button class="fp-knob md" type="button" data-knob="power"
+                  data-tip="MIC GAIN / TX POWER&#10;Scroll: adjust TX output power (0–100 W).&#10;Click: type exact watts.&#10;&#10;Also capped by the Supervisor&#39;s maximum power limit (see sidebar).&#10;Set to minimum when testing — avoid full power into a mismatched antenna.&#10;&#10;Note: power is not CAT-controllable on the TS-850 — greyed if unsupported."></button>
           <span class="knob-val" data-knob-val="power">—</span>
           <div class="scale-arc small"><span>0 W</span><span>100 W</span></div>
         </div>
@@ -133,24 +176,36 @@
     <div class="fp-zone fp-filter">
       <div class="zone-title">FILTER</div>
       <div class="btn-grid-3">
-        <button class="fp-btn" type="button" data-act="filter-cycle">F1</button>
-        <button class="fp-btn" type="button" data-act="filter-cycle">F2</button>
-        <button class="fp-btn" type="button" data-act="filter-cycle">F3</button>
+        <button class="fp-btn" type="button" data-act="filter-cycle"
+                data-tip="FILTER F1 — WIDE&#10;Selects the widest IF filter (typically 2.4 kHz for SSB).&#10;Best for normal SSB and AM operation.&#10;Click cycles: F1 → F2 → F3 → F1.">F1</button>
+        <button class="fp-btn" type="button" data-act="filter-cycle"
+                data-tip="FILTER F2 — MEDIUM&#10;Selects the medium IF filter (typically 1.8–2.0 kHz).&#10;Useful for crowded SSB conditions or RTTY.&#10;Click cycles: F1 → F2 → F3 → F1.">F2</button>
+        <button class="fp-btn" type="button" data-act="filter-cycle"
+                data-tip="FILTER F3 — NARROW&#10;Selects the narrowest IF filter (typically 270–500 Hz CW, 500 Hz SSB).&#10;Best selectivity in QRM. May cut audio on SSB.&#10;Click cycles: F1 → F2 → F3 → F1.">F3</button>
       </div>
       <div class="zone-title small">KEY</div>
       <div class="btn-grid-3">
-        <button class="fp-btn" type="button">PLAY-1</button>
-        <button class="fp-btn" type="button">PLAY-2</button>
-        <button class="fp-btn" type="button">PLAY-3</button>
-        <button class="fp-btn" type="button">REC-1</button>
-        <button class="fp-btn" type="button">REC-2</button>
-        <button class="fp-btn" type="button">REC-3</button>
+        <button class="fp-btn" type="button"
+                data-tip="PLAY-1&#10;Plays back CW memory message #1.&#10;Pre-program contest exchanges or CQ calls in the rig&#39;s keyer memory.">PLAY-1</button>
+        <button class="fp-btn" type="button"
+                data-tip="PLAY-2&#10;Plays back CW memory message #2.">PLAY-2</button>
+        <button class="fp-btn" type="button"
+                data-tip="PLAY-3&#10;Plays back CW memory message #3.">PLAY-3</button>
+        <button class="fp-btn" type="button"
+                data-tip="REC-1&#10;Records a new CW keyer message into memory slot #1.&#10;Paddle input is captured until you stop recording.">REC-1</button>
+        <button class="fp-btn" type="button"
+                data-tip="REC-2&#10;Records CW keyer message into memory slot #2.">REC-2</button>
+        <button class="fp-btn" type="button"
+                data-tip="REC-3&#10;Records CW keyer message into memory slot #3.">REC-3</button>
       </div>
       <div class="zone-title small">MEMORY</div>
       <div class="btn-grid-3">
-        <button class="fp-btn" type="button">M1</button>
-        <button class="fp-btn" type="button">M2</button>
-        <button class="fp-btn" type="button">M3</button>
+        <button class="fp-btn" type="button"
+                data-tip="MEMORY CHANNEL M1&#10;Recalls memory channel 1 (frequency + mode).&#10;The M.CH LCD indicator lights red when in memory mode.">M1</button>
+        <button class="fp-btn" type="button"
+                data-tip="MEMORY CHANNEL M2&#10;Recalls memory channel 2.">M2</button>
+        <button class="fp-btn" type="button"
+                data-tip="MEMORY CHANNEL M3&#10;Recalls memory channel 3.">M3</button>
       </div>
     </div>
 
@@ -158,27 +213,29 @@
       <div class="zone-title">MODE</div>
       <div class="mode-col">
         <button class="fp-btn mode" type="button" data-act="mode" data-mode-a="LSB" data-mode-b="USB"
-                title="Toggle LSB ↔ USB">
+                data-tip="LSB / USB MODE KEY&#10;Click to toggle between LSB and USB.&#10;&#10;LSB (Lower Sideband): standard for 160/80/40 m voice.&#10;USB (Upper Sideband): standard for 20/17/15/12/10 m voice, and all satellite/VHF.&#10;&#10;Active mode shown lit green. Sends MD1; (LSB) or MD2; (USB) via CAT.">
           <span class="m1">LSB</span><span class="m2">USB</span>
         </button>
         <button class="fp-btn mode" type="button" data-act="mode" data-mode-a="CW" data-mode-b="FSK"
-                title="Toggle CW ↔ FSK">
+                data-tip="CW / FSK MODE KEY&#10;Click to toggle between CW and FSK.&#10;&#10;CW (Morse): use a paddle at the KEY jack or send via CAT KY; command.&#10;FSK (RTTY): frequency-shift keying for digital modes; connect audio tones to the DATA port.&#10;&#10;Sends MD3; (CW) or MD6; (FSK) via CAT.">
           <span class="m1">CW</span><span class="m2">FSK</span>
         </button>
         <button class="fp-btn mode" type="button" data-act="mode" data-mode-a="FM" data-mode-b="AM"
-                title="Toggle FM ↔ AM">
+                data-tip="FM / AM MODE KEY&#10;Click to toggle between FM and AM.&#10;&#10;FM: used on 10 m, 6 m, and VHF bands. Requires FM option board on the TS-850.&#10;AM: double-sideband with carrier. Used for 160/80 m AM nets and broadcast listening.&#10;&#10;Sends MD4; (FM) or MD5; (AM) via CAT.">
           <span class="m1">FM</span><span class="m2">AM</span>
         </button>
       </div>
       <div class="vfo-wrap">
         <button class="fp-vfo" data-act="vfo-dial" type="button"
-                title="Wheel = step · Click = enter Hz">
+                data-tip="VFO MAIN TUNING DIAL&#10;Scroll: step the active VFO up/down by the current step size.&#10;Click: open a dialog to type an exact frequency in Hz.&#10;&#10;Example: type 14250000 for 14.250 MHz (20 m USB).&#10;&#10;The active VFO (A or B) is shown by the A/B indicator. Use the FUNCTION zone to switch.">
           <span class="vfo-marker"></span>
           <span class="vfo-grip"></span>
         </button>
         <div class="step-row">
-          <button class="fp-btn tiny" type="button" data-act="step" data-dir="down">◀ STEP</button>
-          <button class="fp-btn tiny" type="button" data-act="step" data-dir="up">STEP ▶</button>
+          <button class="fp-btn tiny" type="button" data-act="step" data-dir="down"
+                  data-tip="STEP DOWN&#10;Decrements the active VFO by one step.&#10;Step size is set on the rig (default 1 kHz).&#10;Sends DN; via CAT.">◀ STEP</button>
+          <button class="fp-btn tiny" type="button" data-act="step" data-dir="up"
+                  data-tip="STEP UP&#10;Increments the active VFO by one step.&#10;Step size is set on the rig (default 1 kHz).&#10;Sends UP; via CAT.">STEP ▶</button>
         </div>
       </div>
     </div>
@@ -187,14 +244,20 @@
       <div class="zone-title">FUNCTION</div>
       <div class="rxtx-grid">
         <span class="rxtx-h">RX</span><span class="rxtx-h">TX</span>
-        <button class="fp-btn" type="button" data-act="select-vfo" data-vfo="A" title="RX VFO A">A</button>
-        <button class="fp-btn" type="button" data-act="split-toggle" title="Toggle Split">SPLIT</button>
-        <button class="fp-btn" type="button" data-act="select-vfo" data-vfo="B" title="RX VFO B">B</button>
-        <button class="fp-btn ptt" type="button" data-act="ptt" title="PTT (TX) — gated by Supervisor TX lock">PTT</button>
+        <button class="fp-btn" type="button" data-act="select-vfo" data-vfo="A"
+                data-tip="VFO A — SELECT RX&#10;Sets VFO A as the active receive (and TX in simplex) VFO.&#10;Frequency shown on the main LCD display.&#10;Sends FR0; via CAT.">A</button>
+        <button class="fp-btn" type="button" data-act="split-toggle"
+                data-tip="SPLIT TX/RX&#10;Toggles split operation: receive on VFO A, transmit on VFO B.&#10;&#10;Standard for working DX pileups — the DX station calls on their frequency while you listen, and your TX goes to the split.&#10;SPLIT indicator lights on the LCD when active.&#10;Sends MX; or clears split via CAT.">SPLIT</button>
+        <button class="fp-btn" type="button" data-act="select-vfo" data-vfo="B"
+                data-tip="VFO B — SELECT RX&#10;Sets VFO B as the active receive VFO.&#10;Useful for monitoring a second frequency (e.g. DX cluster spot).&#10;Sends FR1; via CAT.">B</button>
+        <button class="fp-btn ptt" type="button" data-act="ptt"
+                data-tip="PTT — PUSH TO TALK&#10;Click to key the transmitter (TX).&#10;Click again to return to receive (RX).&#10;&#10;Button pulses red while transmitting.&#10;ON AIR LED lights simultaneously.&#10;&#10;⚠ Gated by the Supervisor TX lock (sidebar). If TX lock is ON, PTT is refused.&#10;Sends TX; (key) or RX; (unkey) via CAT.">PTT</button>
       </div>
       <div class="updown">
-        <button class="fp-btn" type="button" data-act="step" data-dir="down" title="Step down">▼ DOWN</button>
-        <button class="fp-btn" type="button" data-act="step" data-dir="up" title="Step up">UP ▲</button>
+        <button class="fp-btn" type="button" data-act="step" data-dir="down"
+                data-tip="STEP DOWN&#10;Steps the active VFO down by the current step increment.&#10;Same as ◀ STEP in the VFO zone. Sends DN; via CAT.">▼ DOWN</button>
+        <button class="fp-btn" type="button" data-act="step" data-dir="up"
+                data-tip="STEP UP&#10;Steps the active VFO up by the current step increment.&#10;Same as STEP ▶ in the VFO zone. Sends UP; via CAT.">UP ▲</button>
       </div>
     </div>
 
@@ -202,12 +265,14 @@
       <div class="knob-row two">
         <div class="knob-cell">
           <div class="zone-title small">RIT/XIT</div>
-          <button class="fp-knob md" type="button" data-act="rit-toggle" title="Toggle RIT"></button>
+          <button class="fp-knob md" type="button" data-act="rit-toggle"
+                  data-tip="RIT TOGGLE&#10;Click to enable/disable Receiver Incremental Tuning.&#10;&#10;RIT shifts only the receive frequency by the offset shown on the LCD, without moving your TX frequency.&#10;Useful when a correspondent is slightly off-frequency.&#10;&#10;RIT indicator lights on the LCD when active.&#10;Offset cleared with RC; (Clear RIT button in the sidebar).&#10;Sends RT1; (on) or RT0; (off) via CAT."></button>
           <div class="scale-arc small"><span>off</span><span>on</span></div>
         </div>
         <div class="knob-cell">
           <div class="zone-title small">AF · RF</div>
-          <button class="fp-knob md" type="button" data-knob="af" title="AF gain"></button>
+          <button class="fp-knob md" type="button" data-knob="af"
+                  data-tip="AF / RF GAIN&#10;Scroll: adjust audio frequency (AF) gain, i.e. speaker volume (0–255).&#10;Click: type an exact value.&#10;&#10;RF gain reduces the front-end sensitivity — useful in S9+ environments to prevent overload.&#10;&#10;Note: AF/RF gain is not CAT-controllable on the TS-850 — greyed if unsupported."></button>
           <span class="knob-val" data-knob-val="af">—</span>
           <div class="scale-arc small"><span>0</span><span>AF</span></div>
         </div>
@@ -215,12 +280,14 @@
       <div class="knob-row two">
         <div class="knob-cell">
           <div class="zone-title small">SLOPE HIGH</div>
-          <button class="fp-knob md" type="button"></button>
+          <button class="fp-knob md" type="button"
+                  data-tip="HIGH-CUT SLOPE (IF SHIFT)&#10;Adjusts the high-frequency cut-off of the DSP passband filter.&#10;&#10;Rotate left (LO) to narrow the high edge — reduces high-pitched SSB QRM.&#10;Rotate right (HI) for wider, more natural audio.&#10;&#10;Display-only on this panel — adjust on the rig directly."></button>
           <div class="scale-arc small"><span>LO</span><span>HI</span></div>
         </div>
         <div class="knob-cell">
           <div class="zone-title small">LOW · HIGH</div>
-          <button class="fp-knob md" type="button"></button>
+          <button class="fp-knob md" type="button"
+                  data-tip="LOW-CUT / HIGH-CUT PASSBAND&#10;Sets both edges of the DSP audio passband simultaneously.&#10;&#10;NORM = default flat response.&#10;Rotating in either direction narrows the passband to reduce interference on both sides.&#10;&#10;Display-only on this panel — adjust on the rig directly."></button>
           <div class="scale-arc small"><span>NORM</span><span>NORM</span></div>
         </div>
       </div>
@@ -230,16 +297,18 @@
     <div class="fp-zone fp-spectrum">
       <div class="zone-title">SPECTRUM</div>
       <div class="fp-spec-controls">
-        <label>SDR
+        <label data-tip="SDR TYPE&#10;Select the connected Software Defined Radio device for the panadapter.&#10;HackRF / RTL-SDR / Airspy supported.&#10;(SDR integration coming soon)">SDR
           <select disabled>
             <option>HackRF</option><option>RTL-SDR</option><option>Airspy</option>
           </select>
         </label>
-        <label>Freq (MHz)
+        <label data-tip="CENTER FREQUENCY&#10;The frequency in MHz that the panadapter is centred on.&#10;Typically set to match the active VFO frequency.&#10;(SDR integration coming soon)">Freq (MHz)
           <input type="number" value="14.250" step="0.001" disabled>
         </label>
-        <button class="fp-btn tiny" type="button" data-act="spec-start">▶ START</button>
-        <button class="fp-btn tiny" type="button" data-act="spec-stop">■ STOP</button>
+        <button class="fp-btn tiny" type="button" data-act="spec-start"
+                data-tip="START SPECTRUM&#10;Starts the SDR panadapter and waterfall display.&#10;(SDR integration coming soon — will use the existing spectrum worker)">▶ START</button>
+        <button class="fp-btn tiny" type="button" data-act="spec-stop"
+                data-tip="STOP SPECTRUM&#10;Stops the SDR panadapter stream and releases the SDR device.">■ STOP</button>
         <span data-role="spec-status">off</span>
       </div>
       <div class="fp-spec-screen">

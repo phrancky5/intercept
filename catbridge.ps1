@@ -36,7 +36,7 @@ $env:ALLOWED_IPS = "127.0.0.1/8,::1,172.16.0.0/12,192.168.1.0/24"
 
 # === Optional: rigctld settings ===
 # $env:RIGCTLD_ENABLE = "1"           # "0" to disable rigctld relay
-# $env:BRIDGE_TX_LOCK = "1"           # "0" to allow PTT from rigctld clients
+$env:BRIDGE_TX_LOCK = "1"           # "0" to allow PTT from rigctld clients
 # $env:RIGCTLD_DEBUG = "1"            # "1" for verbose rigctld logging
 
 # === Enable verbose bridge debugging ===

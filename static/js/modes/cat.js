@@ -320,13 +320,15 @@ const CATMode = (function() {
     
     function renderBridgeStatus() {
         const badge = $('catBridgeBadge');
+        const leds  = $('catBridgeLeds');
         if (!badge) return;
-        
+
         if (!bridgeInfo || !bridgeInfo.enabled) {
             badge.style.display = 'none';
+            if (leds) leds.style.display = 'none';
             return;
         }
-        
+
         badge.style.display = 'inline-block';
         if (bridgeInfo.reachable) {
             badge.textContent = 'BRIDGE';
@@ -337,6 +339,38 @@ const CATMode = (function() {
             badge.className = 'cat-vis-badge cat-vis-badge--bridge-err';
             badge.title = `Bridge: ${bridgeInfo.url} (unreachable)`;
         }
+
+        if (!leds) return;
+
+        // Only show env-var LEDs when bridge is reachable and data was returned.
+        const hasFlags = bridgeInfo.reachable &&
+            (bridgeInfo.rigctld_enabled !== undefined ||
+             bridgeInfo.tx_lock !== undefined ||
+             bridgeInfo.rigctld_debug !== undefined);
+
+        leds.style.display = hasFlags ? 'inline-flex' : 'none';
+        if (!hasFlags) return;
+
+        function setLed(id, on, activeTitle, inactiveTitle) {
+            const item = $(id);
+            if (!item) return;
+            const dot = item.querySelector('.cat-bridge-led');
+            if (dot) dot.classList.toggle('on', !!on);
+            item.title = on ? activeTitle : inactiveTitle;
+        }
+
+        setLed('catLedRigctld',
+            bridgeInfo.rigctld_enabled,
+            'RIGCTLD_ENABLE=1 — rigctld TCP relay is running',
+            'RIGCTLD_ENABLE=0 — rigctld relay is off');
+        setLed('catLedTxLock',
+            bridgeInfo.tx_lock,
+            'BRIDGE_TX_LOCK=1 — rigctld PTT is blocked (safe)',
+            'BRIDGE_TX_LOCK=0 — rigctld PTT is allowed');
+        setLed('catLedRigctldDbg',
+            bridgeInfo.rigctld_debug,
+            'RIGCTLD_DEBUG=1 — verbose rigctld logging on',
+            'RIGCTLD_DEBUG=0 — debug logging off');
     }
 
     async function refreshStatus() {

@@ -121,6 +121,60 @@
     50% { opacity: 0.5; }
 }
 
+/* Bridge env-var LED strip (next to BRIDGE badge) */
+.cat-bridge-leds {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 10px;
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-color, #21262d);
+    border-radius: 4px;
+}
+
+.cat-bridge-led-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-dim, #6e7681);
+    cursor: default;
+    white-space: nowrap;
+}
+
+.cat-bridge-led {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #3a3a3a, #1a1a1a);
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+    flex-shrink: 0;
+}
+
+.cat-bridge-led.on {
+    background: radial-gradient(circle at 35% 35%, #b6ffcb, #2eff7a 50%, #0a8a2a);
+    border-color: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 5px rgba(46, 255, 122, 0.6);
+}
+
+/* TX LOCK led is amber-on when active (it's a "warning/safety" state) */
+#catLedTxLock .cat-bridge-led.on {
+    background: radial-gradient(circle at 35% 35%, #ffe08a, #ffb84d 50%, #a06010);
+    box-shadow: 0 0 5px rgba(255, 184, 77, 0.6);
+}
+
+/* DEBUG led is cyan when on */
+#catLedRigctldDbg .cat-bridge-led.on {
+    background: radial-gradient(circle at 35% 35%, #a0efff, #00d4ff 50%, #007090);
+    box-shadow: 0 0 5px rgba(0, 212, 255, 0.6);
+}
+
 .cat-vis-status {
     display: flex;
     align-items: center;
